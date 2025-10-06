@@ -3,19 +3,7 @@ import json
 from datetime import datetime
 import pandas as pd
 import numpy as np
-from scipy.stats import linregress
-from decimal import Decimal
-import matplotlib.pyplot as plt
 
-from sklearn.model_selection import StratifiedShuffleSplit, train_test_split, KFold
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import BaggingRegressor
-from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.cluster import KMeans
-
-import statsmodels.api as sm
-import statsmodels.formula.api as smf
 
 from data_objects.cow_data import CowData
 from data_objects.feed_history_data import FeedHistoryData
@@ -162,6 +150,106 @@ class DataProcessing:
 
         self.objects = self.cast_to_obj(cows, weight_histories, feed_histories )
         return self.objects 
+     
+    def _process_single_window(self, cow_data, weight_history, feed_history, x, n_weighing):
+        """
+        Processes a single non-overlapping window for a cow.
+        
+        Args:
+            cow_data: CowData object
+            weight_history: WeightHistoryData object
+            feed_history: FeedHistoryData object
+            x (int): Starting index in weight history
+            n_weighing (int): Number of weighings in this window
+            
+        Returns:
+            dict or None: Dictionary of features, or None if window should be skipped
+        """
+        entry = weight_history.data[x]
+        ret_dict = {}
+        
+        # ===== SUPER PRIMITIVES =====
+        target_weighing = x + n_weighing
+        ret_dict['pred_date'] = weight_history.data[target_weighing]['date']
+        ret_dict['date'] = entry['date']
+        
+        ret_dict['day_diff'] = (datetime.strptime(ret_dict['pred_date'], "%Y-%m-%d") - 
+                               datetime.strptime(ret_dict['date'], "%Y-%m-%d")).days
+        ret_dict['day_diff_2'] = ret_dict['day_diff']**2
+        
+        ret_dict['weight'] = entry['weight']
+        ret_dict['cattleId'] = cow_data.cattleId
+        ret_dict['originWeight'] = cow_data.originWeight
+        ret_dict['breed'] = cow_data.breed
+        
+        # Breed indicators
+        ret_dict['isLimousine'] = (ret_dict['breed'] == 'Limousin')
+        ret_dict['isSimental'] = (ret_dict['breed'] == 'Simental')
+        
+        if ret_dict['breed'] not in ['Limousin', 'Simental']:
+            ret_dict['breed'] = 'Other'
+        
+        ret_dict['entryWeight'] = cow_data.entryWeight
+        
+        # ===== PROCESS FEED DATA =====
+        feed_processor = FeedProcessor(feed_history, weight_history, x, n_weighing)
+        
+        # Skip if required feeds not present
+        if not feed_processor.has_required_feeds:
+            return None
+        
+        # Get all feed features
+        feed_features = feed_processor.get_all_features()
+        ret_dict.update(feed_features)
+        
+        # ===== TARGET BASICS =====
+        ret_dict['pred_weight'] = weight_history.data[target_weighing]['weight']
+        ret_dict['pred_weight_gain'] = ret_dict['pred_weight'] - ret_dict['weight']
+        ret_dict['pred_adgLatest_average'] = ret_dict['pred_weight_gain'] / ret_dict['day_diff']
+        ret_dict['pred_adgLatest_average_inverse_hyperbolic'] = (
+            np.log(ret_dict['pred_adgLatest_average'] + 
+                   (ret_dict['pred_adgLatest_average']**2 + 1)**0.5) * 0.5
+        )
+        ret_dict['pred_fcrLatest_average'] = (
+            (ret_dict['pred_weight_gain'] / ret_dict['total_dm_intake']) * 100
+        )
+        
+        # ===== PRIMITIVES =====
+        ret_dict['metabolic_weight'] = ret_dict['weight']**0.75
+        ret_dict['pred_adgLatest_average_mw'] = (
+            (ret_dict['pred_weight_gain'] / ret_dict['day_diff']) * ret_dict['metabolic_weight']
+        )
+        ret_dict['originWeight_mw'] = ret_dict['originWeight'] * ret_dict['metabolic_weight']
+        
+        # Breed-specific metabolic weights
+        for breed_name in ['Simental', 'Limousin', 'Other']:
+            ret_dict[f'metabolic_weight_{breed_name}'] = 0
+            ret_dict[f'metabolic_weight_{breed_name}_mw'] = 0
+        
+        ret_dict[f'metabolic_weight_{ret_dict["breed"]}'] = ret_dict['metabolic_weight']
+        ret_dict[f'metabolic_weight_{ret_dict["breed"]}_mw'] = ret_dict['metabolic_weight']**2
+        
+        # Days on feed
+        ret_dict['daysOnFeedNow'] = (
+            datetime.strptime(ret_dict['date'], "%Y-%m-%d") - 
+            datetime.strptime(cow_data.entryDate, "%Y-%m-%d")
+        ).days
+        ret_dict['daysOnFeedNow_2'] = ret_dict['daysOnFeedNow']**2
+        ret_dict['daysOnFeed_then'] = ret_dict['daysOnFeedNow'] + ret_dict['day_diff']
+        
+        ret_dict['originWeight_ddmi'] = ret_dict['originWeight'] / ret_dict['avg_dm_intake_per_day']
+        
+        # Breed-specific with ddmi
+        for breed_name in ['Simental', 'Limousin', 'Other']:
+            ret_dict[f'metabolic_weight_{breed_name}_ddmi'] = (
+                ret_dict[f'metabolic_weight_{breed_name}'] / ret_dict['avg_dm_intake_per_day']
+            )
+        
+        # Filter by minimum days on feed and breed
+        if ret_dict['daysOnFeedNow'] < 10 or ret_dict['breed'] == 'Other':
+            return None
+        
+        return ret_dict
 
 
     def get_variables(self, n_weighing):
@@ -191,88 +279,31 @@ class DataProcessing:
             
             # Iterate through weight history using non-overlapping windows
             for x in range(0, len(weight_history.data) - n_weighing, n_weighing):
-                entry = weight_history.data[x]
-                ret_dict = {}
-                
-                # ===== SUPER PRIMITIVES =====
-                target_weighing = x + n_weighing
-                ret_dict['pred_date'] = weight_history.data[target_weighing]['date']
-                ret_dict['date'] = entry['date']
-                
-                ret_dict['day_diff'] = (datetime.strptime(ret_dict['pred_date'], "%Y-%m-%d") - 
-                                       datetime.strptime(ret_dict['date'], "%Y-%m-%d")).days
-                ret_dict['day_diff_2'] = ret_dict['day_diff']**2
-                
-                ret_dict['weight'] = entry['weight']
-                ret_dict['cattleId'] = cow_data.cattleId
-                ret_dict['originWeight'] = cow_data.originWeight
-                ret_dict['breed'] = cow_data.breed
-                
-                # Breed indicators
-                ret_dict['isLimousine'] = (ret_dict['breed'] == 'Limousin')
-                ret_dict['isSimental'] = (ret_dict['breed'] == 'Simental')
-                
-                if ret_dict['breed'] not in ['Limousin', 'Simental']:
-                    ret_dict['breed'] = 'Other'
-                
-                ret_dict['entryWeight'] = cow_data.entryWeight
-                
-                # ===== PROCESS FEED DATA =====
-                feed_processor = FeedProcessor(feed_history, weight_history, x, n_weighing)
-                
-                # Skip if required feeds not present
-                if not feed_processor.has_required_feeds:
-                    continue
-                
-                # Get all feed features
-                feed_features = feed_processor.get_all_features()
-                ret_dict.update(feed_features)
-                
-                # ===== TARGET BASICS =====
-                ret_dict['pred_weight'] = weight_history.data[target_weighing]['weight']
-                ret_dict['pred_weight_gain'] = ret_dict['pred_weight'] - ret_dict['weight']
-                ret_dict['pred_adgLatest_average'] = ret_dict['pred_weight_gain'] / ret_dict['day_diff']
-                ret_dict['pred_adgLatest_average_inverse_hyperbolic'] = (
-                    np.log(ret_dict['pred_adgLatest_average'] + 
-                           (ret_dict['pred_adgLatest_average']**2 + 1)**0.5) * 0.5
-                )
-                ret_dict['pred_fcrLatest_average'] = (
-                    (ret_dict['pred_weight_gain'] / ret_dict['total_dm_intake']) * 100
+                window_data = self._process_single_window(
+                    cow_data, weight_history, feed_history, x, n_weighing
                 )
                 
-                # ===== PRIMITIVES =====
-                ret_dict['metabolic_weight'] = ret_dict['weight']**0.75
-                ret_dict['pred_adgLatest_average_mw'] = (
-                    (ret_dict['pred_weight_gain'] / ret_dict['day_diff']) * ret_dict['metabolic_weight']
-                )
-                ret_dict['originWeight_mw'] = ret_dict['originWeight'] * ret_dict['metabolic_weight']
-                
-                # Breed-specific metabolic weights
-                for breed_name in ['Simental', 'Limousin', 'Other']:
-                    ret_dict[f'metabolic_weight_{breed_name}'] = 0
-                    ret_dict[f'metabolic_weight_{breed_name}_mw'] = 0
-                
-                ret_dict[f'metabolic_weight_{ret_dict["breed"]}'] = ret_dict['metabolic_weight']
-                ret_dict[f'metabolic_weight_{ret_dict["breed"]}_mw'] = ret_dict['metabolic_weight']**2
-                
-                # Days on feed
-                ret_dict['daysOnFeedNow'] = (
-                    datetime.strptime(ret_dict['date'], "%Y-%m-%d") - 
-                    datetime.strptime(cow_data.entryDate, "%Y-%m-%d")
-                ).days
-                ret_dict['daysOnFeedNow_2'] = ret_dict['daysOnFeedNow']**2
-                ret_dict['daysOnFeed_then'] = ret_dict['daysOnFeedNow'] + ret_dict['day_diff']
-                
-                ret_dict['originWeight_ddmi'] = ret_dict['originWeight'] / ret_dict['avg_dm_intake_per_day']
-                
-                # Breed-specific with ddmi
-                for breed_name in ['Simental', 'Limousin', 'Other']:
-                    ret_dict[f'metabolic_weight_{breed_name}_ddmi'] = (
-                        ret_dict[f'metabolic_weight_{breed_name}'] / ret_dict['avg_dm_intake_per_day']
-                    )
-                
-                # Filter by minimum days on feed and breed
-                if ret_dict['daysOnFeedNow'] >= 10 and ret_dict['breed'] != 'Other':
-                    ret_arr.append(ret_dict)
+                if window_data is not None:
+                    ret_arr.append(window_data)
         
         return ret_arr
+
+
+    def get_dfs(self, n_weighings: list):
+        """
+        Generate DataFrames for multiple n_weighing values.
+        
+        Args:
+            n_weighings (list): List of integers representing different weighing intervals
+            
+        Returns:
+            dict: Dictionary mapping n_weighing values to their corresponding DataFrames
+        """
+        for n in n_weighings:
+            arr = self.get_variables(n)
+            
+            df = pd.DataFrame(arr)
+            
+            self.dfs[n] = df
+        
+        return self.dfs
