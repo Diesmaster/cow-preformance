@@ -21,6 +21,8 @@ from data_objects.cow_data import CowData
 from data_objects.feed_history_data import FeedHistoryData
 from data_objects.weight_history_data import WeightHistoryData
 
+from consts.consts import tdn_table, costs_per_dm, sales_price
+from data_processor.FeedProcessor import FeedProcessor 
 
 class DataProcessing:
     """
@@ -29,7 +31,7 @@ class DataProcessing:
     This class loads JSON data files, cleans number formats in dictionaries,
     and casts the raw data into corresponding object types.
     """
-    def __init__(self, main_folder='./actual-data', analysis_folder='./analysis-dec-2024/'):
+    def __init__(self, main_folder='./data', analysis_folder='./analysis-dec-2024/'):
         # Folders
         self.main_folder = main_folder
         self.analysis_folder = analysis_folder
@@ -42,6 +44,9 @@ class DataProcessing:
         
         # Other constants
         self.date_format = '%Y-%m-%d'
+
+        self.objects = None
+        self.dfs = {}
 
     def load_json_data(self, file_name, folder=None):
         """
@@ -112,7 +117,7 @@ class DataProcessing:
                     dic_of_dicts[key] = False
         return dic_of_dicts
 
-    def cast_to_obj(self, cows, weight_histories, feed_histories, medical_histories):
+    def cast_to_obj(self, cows, weight_histories, feed_histories):
         """
         Casts the raw dictionary data into specific data objects for each cow.
 
@@ -155,4 +160,119 @@ class DataProcessing:
         weight_histories = self.fix_numbers_dic_of_dic(weight_histories)
         feed_histories = self.fix_numbers_dic_of_dic(feed_histories)
 
-        return self.cast_to_obj(cows, weight_histories, feed_histories, medical_histories)
+        self.objects = self.cast_to_obj(cows, weight_histories, feed_histories )
+        return self.objects 
+
+
+    def get_variables(self, n_weighing):
+        """
+        Processes cow data objects to extract features for modeling.
+        Uses non-overlapping windows to ensure statistical independence.
+        
+        Args:
+            n_weighing (int): Number of weighings ahead to predict
+        
+        Returns:
+            list: List of dictionaries containing features for each observation
+        """
+        if self.objects is None:
+            self.get_data()
+
+        ret_arr = []
+
+        for cow_id, cow_dict in self.objects.items():
+            cow_data = cow_dict['cow_data']
+            weight_history = cow_dict['weight_history_data']
+            feed_history = cow_dict['feed_history_data']
+            
+            # Skip if no feed history
+            if feed_history is None:
+                continue
+            
+            # Iterate through weight history using non-overlapping windows
+            for x in range(0, len(weight_history.data) - n_weighing, n_weighing):
+                entry = weight_history.data[x]
+                ret_dict = {}
+                
+                # ===== SUPER PRIMITIVES =====
+                target_weighing = x + n_weighing
+                ret_dict['pred_date'] = weight_history.data[target_weighing]['date']
+                ret_dict['date'] = entry['date']
+                
+                ret_dict['day_diff'] = (datetime.strptime(ret_dict['pred_date'], "%Y-%m-%d") - 
+                                       datetime.strptime(ret_dict['date'], "%Y-%m-%d")).days
+                ret_dict['day_diff_2'] = ret_dict['day_diff']**2
+                
+                ret_dict['weight'] = entry['weight']
+                ret_dict['cattleId'] = cow_data.cattleId
+                ret_dict['originWeight'] = cow_data.originWeight
+                ret_dict['breed'] = cow_data.breed
+                
+                # Breed indicators
+                ret_dict['isLimousine'] = (ret_dict['breed'] == 'Limousin')
+                ret_dict['isSimental'] = (ret_dict['breed'] == 'Simental')
+                
+                if ret_dict['breed'] not in ['Limousin', 'Simental']:
+                    ret_dict['breed'] = 'Other'
+                
+                ret_dict['entryWeight'] = cow_data.entryWeight
+                
+                # ===== PROCESS FEED DATA =====
+                feed_processor = FeedProcessor(feed_history, weight_history, x, n_weighing)
+                
+                # Skip if required feeds not present
+                if not feed_processor.has_required_feeds:
+                    continue
+                
+                # Get all feed features
+                feed_features = feed_processor.get_all_features()
+                ret_dict.update(feed_features)
+                
+                # ===== TARGET BASICS =====
+                ret_dict['pred_weight'] = weight_history.data[target_weighing]['weight']
+                ret_dict['pred_weight_gain'] = ret_dict['pred_weight'] - ret_dict['weight']
+                ret_dict['pred_adgLatest_average'] = ret_dict['pred_weight_gain'] / ret_dict['day_diff']
+                ret_dict['pred_adgLatest_average_inverse_hyperbolic'] = (
+                    np.log(ret_dict['pred_adgLatest_average'] + 
+                           (ret_dict['pred_adgLatest_average']**2 + 1)**0.5) * 0.5
+                )
+                ret_dict['pred_fcrLatest_average'] = (
+                    (ret_dict['pred_weight_gain'] / ret_dict['total_dm_intake']) * 100
+                )
+                
+                # ===== PRIMITIVES =====
+                ret_dict['metabolic_weight'] = ret_dict['weight']**0.75
+                ret_dict['pred_adgLatest_average_mw'] = (
+                    (ret_dict['pred_weight_gain'] / ret_dict['day_diff']) * ret_dict['metabolic_weight']
+                )
+                ret_dict['originWeight_mw'] = ret_dict['originWeight'] * ret_dict['metabolic_weight']
+                
+                # Breed-specific metabolic weights
+                for breed_name in ['Simental', 'Limousin', 'Other']:
+                    ret_dict[f'metabolic_weight_{breed_name}'] = 0
+                    ret_dict[f'metabolic_weight_{breed_name}_mw'] = 0
+                
+                ret_dict[f'metabolic_weight_{ret_dict["breed"]}'] = ret_dict['metabolic_weight']
+                ret_dict[f'metabolic_weight_{ret_dict["breed"]}_mw'] = ret_dict['metabolic_weight']**2
+                
+                # Days on feed
+                ret_dict['daysOnFeedNow'] = (
+                    datetime.strptime(ret_dict['date'], "%Y-%m-%d") - 
+                    datetime.strptime(cow_data.entryDate, "%Y-%m-%d")
+                ).days
+                ret_dict['daysOnFeedNow_2'] = ret_dict['daysOnFeedNow']**2
+                ret_dict['daysOnFeed_then'] = ret_dict['daysOnFeedNow'] + ret_dict['day_diff']
+                
+                ret_dict['originWeight_ddmi'] = ret_dict['originWeight'] / ret_dict['avg_dm_intake_per_day']
+                
+                # Breed-specific with ddmi
+                for breed_name in ['Simental', 'Limousin', 'Other']:
+                    ret_dict[f'metabolic_weight_{breed_name}_ddmi'] = (
+                        ret_dict[f'metabolic_weight_{breed_name}'] / ret_dict['avg_dm_intake_per_day']
+                    )
+                
+                # Filter by minimum days on feed and breed
+                if ret_dict['daysOnFeedNow'] >= 10 and ret_dict['breed'] != 'Other':
+                    ret_arr.append(ret_dict)
+        
+        return ret_arr
