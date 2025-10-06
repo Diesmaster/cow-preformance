@@ -1,4 +1,4 @@
-from dataprocessor.DataProcessor import DataProcessing
+from data_processor.DataProcessor import DataProcessing
 
 
 
