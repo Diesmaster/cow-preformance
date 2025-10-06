@@ -1,0 +1,322 @@
+{
+  "title": "weight_dmi_adg",
+  "n": 1,
+  "formula": "pred_adgLatest_average ~ weight + avg_real_dm_inake_per_weight_per_day_c + avg_real_dm_inake_per_weight_per_day_c2",
+  "independent_variables": [
+    "weight",
+    "avg_real_dm_inake_per_weight_per_day_c",
+    "avg_real_dm_inake_per_weight_per_day_c2"
+  ],
+  "dependent_variable": "pred_adgLatest_average",
+  "measurement_error_sd": 0.11547005383792516,
+  "simex_parameters": {
+    "lambdas": [
+      0.0,
+      0.5,
+      1.0,
+      1.5,
+      2.0
+    ],
+    "n_simulations": 100,
+    "extrapolation_method": "quadratic"
+  },
+  "naive_results": {
+    "r_squared": 0.0722598641915354,
+    "adj_r_squared": 0.06395174357235511,
+    "f_statistic": 8.697498207322,
+    "f_pvalue": 1.4272053968217819e-05,
+    "aic": 1027.790064387506,
+    "bic": 1043.0940648170279,
+    "n_observations": 339,
+    "coefficients": {
+      "Intercept": {
+        "value": 0.8836970297516937,
+        "std_err": 0.2612113316744577,
+        "t_stat": 3.38307310056911,
+        "p_value": 0.0008017067514854014,
+        "conf_int_lower": 0.36987589630414597,
+        "conf_int_upper": 1.3975181631992415
+      },
+      "weight": {
+        "value": 0.00022977830924274286,
+        "std_err": 0.000489307365011788,
+        "t_stat": 0.4695991225008584,
+        "p_value": 0.638946962718456,
+        "conf_int_lower": -0.000732723827563194,
+        "conf_int_upper": 0.0011922804460486798
+      },
+      "avg_real_dm_inake_per_weight_per_day_c": {
+        "value": 1.5882257429353004,
+        "std_err": 0.3144245791666353,
+        "t_stat": 5.051213703282369,
+        "p_value": 7.228080872566111e-07,
+        "conf_int_lower": 0.9697303943012099,
+        "conf_int_upper": 2.206721091569391
+      },
+      "avg_real_dm_inake_per_weight_per_day_c2": {
+        "value": 0.3012311035291626,
+        "std_err": 1.2267105518767678,
+        "t_stat": 0.2455600492457682,
+        "p_value": 0.8061731872233175,
+        "conf_int_lower": -2.111795169630111,
+        "conf_int_upper": 2.7142573766884364
+      }
+    }
+  },
+  "simex_results": {
+    "corrected_coefficients": {
+      "Intercept": 0.891455337418961,
+      "weight": 0.00021300959991752468,
+      "avg_real_dm_inake_per_weight_per_day_c": 1.6015685135827387,
+      "avg_real_dm_inake_per_weight_per_day_c2": 0.27191659021163267
+    },
+    "extrapolation_info": {
+      "Intercept": {
+        "method": "quadratic",
+        "coefficients": [
+          0.003078208725867607,
+          -0.004434606572987306,
+          0.883942522120106
+        ],
+        "lambda_values": [
+          0.0,
+          0.5,
+          1.0,
+          1.5,
+          2.0
+        ],
+        "param_values": [
+          0.8836970297516937,
+          0.8833079960547785,
+          0.8816194033643682,
+          0.8846923180656209,
+          0.8873093959431421
+        ]
+      },
+      "weight": {
+        "method": "quadratic",
+        "coefficients": [
+          -6.843900541990342e-06,
+          9.623130922855403e-06,
+          0.00022947663138237043
+        ],
+        "lambda_values": [
+          0.0,
+          0.5,
+          1.0,
+          1.5,
+          2.0
+        ],
+        "param_values": [
+          0.00022977830924274283,
+          0.00023082760208017333,
+          0.00023569465348538348,
+          0.00022567711554577217,
+          0.0002221918771071302
+        ]
+      },
+      "avg_real_dm_inake_per_weight_per_day_c": {
+        "method": "quadratic",
+        "coefficients": [
+          0.00382107799062209,
+          -0.008582156473023142,
+          1.5891652791190933
+        ],
+        "lambda_values": [
+          0.0,
+          0.5,
+          1.0,
+          1.5,
+          2.0
+        ],
+        "param_values": [
+          1.5882257429353002,
+          1.587693623197013,
+          1.5844489592891282,
+          1.5829656388684379,
+          1.5882397338701408
+        ]
+      },
+      "avg_real_dm_inake_per_weight_per_day_c2": {
+        "method": "quadratic",
+        "coefficients": [
+          -0.007544287517141949,
+          0.016929399596894372,
+          0.29639027732566897
+        ],
+        "lambda_values": [
+          0.0,
+          0.5,
+          1.0,
+          1.5,
+          2.0
+        ],
+        "param_values": [
+          0.30123110352916255,
+          0.29408291075543974,
+          0.3033884156526336,
+          0.31687835596721614,
+          0.29443544232980046
+        ]
+      }
+    }
+  },
+  "correction_summary": {
+    "Intercept": {
+      "naive": 0.8836970297516937,
+      "corrected": 0.891455337418961,
+      "change_percent": 0.8779375064152061
+    },
+    "weight": {
+      "naive": 0.00022977830924274286,
+      "corrected": 0.00021300959991752468,
+      "change_percent": -7.297777314351871
+    },
+    "avg_real_dm_inake_per_weight_per_day_c": {
+      "naive": 1.5882257429353004,
+      "corrected": 1.6015685135827387,
+      "change_percent": 0.8401054262461868
+    },
+    "avg_real_dm_inake_per_weight_per_day_c2": {
+      "naive": 0.3012311035291626,
+      "corrected": 0.27191659021163267,
+      "change_percent": -9.731569208520312
+    }
+  },
+  "diagnostics": {
+    "normality": {
+      "error": "name 'normal_ad' is not defined"
+    },
+    "breusch_pagan": {
+      "error": "name 'het_breuschpagan' is not defined"
+    },
+    "white_test": {
+      "error": "name 'het_white' is not defined"
+    },
+    "durbin_watson": {
+      "error": "name 'durbin_watson' is not defined"
+    },
+    "vif": {
+      "Intercept": NaN,
+      "weight": NaN,
+      "avg_real_dm_inake_per_weight_per_day_c": NaN,
+      "avg_real_dm_inake_per_weight_per_day_c2": NaN
+    },
+    "reset": {
+      "error": "name 'linear_reset' is not defined"
+    },
+    "influence": {
+      "error": "name 'OLSInfluence' is not defined"
+    }
+  },
+  "cross_validation": {
+    "mean_r2": 0.022700240483043775,
+    "std_r2": 0.04993847007170042,
+    "mean_mae": 0.8428457947373612,
+    "std_mae": 0.04409279189355582,
+    "mean_rmse": 1.1039480876505003,
+    "std_rmse": 0.08279685418932362,
+    "fold_metrics": {
+      "r2": [
+        0.08102919187553159,
+        -0.04834191161339274,
+        0.06575224324699536,
+        0.03673960203608284,
+        -0.021677923129998167
+      ],
+      "mae": [
+        0.8118398219049586,
+        0.7902665407242293,
+        0.9064411138905767,
+        0.8232539241678464,
+        0.8824275729991955
+      ],
+      "rmse": [
+        1.0325535943568889,
+        1.0241111346092322,
+        1.1639209030681121,
+        1.0628459926308262,
+        1.2363088135874418
+      ]
+    },
+    "n_splits": 5,
+    "corrected": true
+  },
+  "simulation_results": [
+    {
+      "lambda": 0.0,
+      "params": {
+        "Intercept": 0.8836970297516937,
+        "weight": 0.00022977830924274283,
+        "avg_real_dm_inake_per_weight_per_day_c": 1.5882257429353002,
+        "avg_real_dm_inake_per_weight_per_day_c2": 0.30123110352916255
+      },
+      "params_std": {
+        "Intercept": 0.0,
+        "weight": 2.710505431213761e-20,
+        "avg_real_dm_inake_per_weight_per_day_c": 2.220446049250313e-16,
+        "avg_real_dm_inake_per_weight_per_day_c2": 5.551115123125783e-17
+      }
+    },
+    {
+      "lambda": 0.5,
+      "params": {
+        "Intercept": 0.8833079960547785,
+        "weight": 0.00023082760208017333,
+        "avg_real_dm_inake_per_weight_per_day_c": 1.587693623197013,
+        "avg_real_dm_inake_per_weight_per_day_c2": 0.29408291075543974
+      },
+      "params_std": {
+        "Intercept": 0.02163764701224005,
+        "weight": 4.07004301787361e-05,
+        "avg_real_dm_inake_per_weight_per_day_c": 0.025171038393277452,
+        "avg_real_dm_inake_per_weight_per_day_c2": 0.084977738943208
+      }
+    },
+    {
+      "lambda": 1.0,
+      "params": {
+        "Intercept": 0.8816194033643682,
+        "weight": 0.00023569465348538348,
+        "avg_real_dm_inake_per_weight_per_day_c": 1.5844489592891282,
+        "avg_real_dm_inake_per_weight_per_day_c2": 0.3033884156526336
+      },
+      "params_std": {
+        "Intercept": 0.02563616672439573,
+        "weight": 4.884676102411831e-05,
+        "avg_real_dm_inake_per_weight_per_day_c": 0.03191123865114769,
+        "avg_real_dm_inake_per_weight_per_day_c2": 0.1321467073135376
+      }
+    },
+    {
+      "lambda": 1.5,
+      "params": {
+        "Intercept": 0.8846923180656209,
+        "weight": 0.00022567711554577217,
+        "avg_real_dm_inake_per_weight_per_day_c": 1.5829656388684379,
+        "avg_real_dm_inake_per_weight_per_day_c2": 0.31687835596721614
+      },
+      "params_std": {
+        "Intercept": 0.03432001547690111,
+        "weight": 6.306446116058226e-05,
+        "avg_real_dm_inake_per_weight_per_day_c": 0.042285869289703584,
+        "avg_real_dm_inake_per_weight_per_day_c2": 0.18267969388980634
+      }
+    },
+    {
+      "lambda": 2.0,
+      "params": {
+        "Intercept": 0.8873093959431421,
+        "weight": 0.0002221918771071302,
+        "avg_real_dm_inake_per_weight_per_day_c": 1.5882397338701408,
+        "avg_real_dm_inake_per_weight_per_day_c2": 0.29443544232980046
+      },
+      "params_std": {
+        "Intercept": 0.03385035840709698,
+        "weight": 6.315939355230963e-05,
+        "avg_real_dm_inake_per_weight_per_day_c": 0.040613999124496244,
+        "avg_real_dm_inake_per_weight_per_day_c2": 0.18032522756614627
+      }
+    }
+  ]
+}

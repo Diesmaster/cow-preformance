@@ -177,7 +177,9 @@ class DataProcessing:
         ret_dict['day_diff'] = (datetime.strptime(ret_dict['pred_date'], "%Y-%m-%d") - 
                                datetime.strptime(ret_dict['date'], "%Y-%m-%d")).days
         ret_dict['day_diff_2'] = ret_dict['day_diff']**2
-        
+      
+        ret_dict['theoritical_error_adg'] = 20/ret_dict['day_diff']
+
         ret_dict['weight'] = entry['weight']
         ret_dict['cattleId'] = cow_data.cattleId
         ret_dict['originWeight'] = cow_data.originWeight
@@ -300,6 +302,7 @@ class DataProcessing:
             center_poly_cols = [
                 "avg_real_dm_inake_per_weight_per_day",
                 "per_slobber_dm_dmi",
+                "per_slobber_dm",
                 "FeedRatio",
                 "total_tdn_dt",
                 "total_tdn_mw_dt",

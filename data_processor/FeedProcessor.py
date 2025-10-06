@@ -164,8 +164,6 @@ class FeedProcessor:
         self.total_tdn_mw_dt_squared = self.total_tdn_mw_dt ** 2
        
         # times dmi
-
-        self.per_slobber_dm_squared_dmi = (self.per_slobber_dm ** 2)*self.avg_real_dm_inake_per_weight_per_day
         self.per_slobber_dm_dmi = (self.per_slobber_dm)*self.avg_real_dm_inake_per_weight_per_day
 
         # Calculate log transformations for key feed composition metrics
@@ -260,8 +258,6 @@ class FeedProcessor:
            
             # dmi features
             'per_slobber_dm_dmi':self.per_slobber_dm_dmi,
-            'per_slobber_dm_squared_dmi':self.per_slobber_dm_squared_dmi,
-
 
             # Log features
             'silage_dm_log': self.silage_dm_log,

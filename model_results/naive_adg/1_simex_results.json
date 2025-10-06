@@ -1,0 +1,418 @@
+{
+  "title": "naive_adg",
+  "n": 1,
+  "formula": "pred_adgLatest_average ~ originWeight + metabolic_weight + per_slobber_dm_log + avg_real_dm_inake_per_weight_per_day_log + day_diff",
+  "independent_variables": [
+    "originWeight",
+    "metabolic_weight",
+    "per_slobber_dm_log",
+    "avg_real_dm_inake_per_weight_per_day_log",
+    "day_diff"
+  ],
+  "dependent_variable": "pred_adgLatest_average",
+  "measurement_error_sd": 0.11547005383792516,
+  "simex_parameters": {
+    "lambdas": [
+      0.0,
+      0.5,
+      1.0,
+      1.5,
+      2.0
+    ],
+    "n_simulations": 100,
+    "extrapolation_method": "quadratic"
+  },
+  "naive_results": {
+    "r_squared": 0.12837985255719742,
+    "adj_r_squared": 0.11529246295595419,
+    "f_statistic": 9.809431557306244,
+    "f_pvalue": 9.262238459835554e-09,
+    "aic": 1010.6371595982704,
+    "bic": 1033.593160242553,
+    "n_observations": 339,
+    "coefficients": {
+      "Intercept": {
+        "value": -1.9214460217379412,
+        "std_err": 0.9443542398082451,
+        "t_stat": -2.034666590926831,
+        "p_value": 0.042676283064038915,
+        "conf_int_lower": -3.77909794359611,
+        "conf_int_upper": -0.06379409987977236
+      },
+      "originWeight": {
+        "value": 0.004435866700041709,
+        "std_err": 0.002204817161121046,
+        "t_stat": 2.0118977565406277,
+        "p_value": 0.04503578599381305,
+        "conf_int_lower": 9.874121889382002e-05,
+        "conf_int_upper": 0.008772992181189598
+      },
+      "metabolic_weight": {
+        "value": -0.006812807360213766,
+        "std_err": 0.005186602290138913,
+        "t_stat": -1.3135395735213193,
+        "p_value": 0.1899054769141389,
+        "conf_int_lower": -0.017015442458402065,
+        "conf_int_upper": 0.0033898277379745337
+      },
+      "per_slobber_dm_log": {
+        "value": -1.6838651496111943,
+        "std_err": 0.7868724663321239,
+        "t_stat": -2.139946715203105,
+        "p_value": 0.03308541103780997,
+        "conf_int_lower": -3.2317325575406155,
+        "conf_int_upper": -0.13599774168177325
+      },
+      "avg_real_dm_inake_per_weight_per_day_log": {
+        "value": 2.588798104177729,
+        "std_err": 0.8462242706325066,
+        "t_stat": 3.059234051798991,
+        "p_value": 0.002399098161393112,
+        "conf_int_lower": 0.9241789640310165,
+        "conf_int_upper": 4.253417244324441
+      },
+      "day_diff": {
+        "value": -0.09052509750956568,
+        "std_err": 0.03768913367923041,
+        "t_stat": -2.401888519911826,
+        "p_value": 0.01685801408928779,
+        "conf_int_lower": -0.1646638990959368,
+        "conf_int_upper": -0.01638629592319457
+      }
+    }
+  },
+  "simex_results": {
+    "corrected_coefficients": {
+      "Intercept": -1.948624227619086,
+      "originWeight": 0.004416182761125733,
+      "metabolic_weight": -0.0067102572110909016,
+      "per_slobber_dm_log": -1.7310284350755991,
+      "avg_real_dm_inake_per_weight_per_day_log": 2.6052348282017626,
+      "day_diff": -0.0908519529297873
+    },
+    "extrapolation_info": {
+      "Intercept": {
+        "method": "quadratic",
+        "coefficients": [
+          -0.007445413209598467,
+          0.016638821145335006,
+          -1.9245399932641525
+        ],
+        "lambda_values": [
+          0.0,
+          0.5,
+          1.0,
+          1.5,
+          2.0
+        ],
+        "param_values": [
+          -1.9214460217379417,
+          -1.9250971320410308,
+          -1.912864826344249,
+          -1.9126277571994925,
+          -1.9233107223433654
+        ]
+      },
+      "originWeight": {
+        "method": "quadratic",
+        "coefficients": [
+          -9.971357506284559e-06,
+          1.1365672146050513e-05,
+          0.004437519790778068
+        ],
+        "lambda_values": [
+          0.0,
+          0.5,
+          1.0,
+          1.5,
+          2.0
+        ],
+        "param_values": [
+          0.004435866700041709,
+          0.004439082324489787,
+          0.004453715038790213,
+          0.00441402562976291,
+          0.00442695244023885
+        ]
+      },
+      "metabolic_weight": {
+        "method": "quadratic",
+        "coefficients": [
+          4.69454786317034e-05,
+          -5.634716446374979e-05,
+          -0.006813549854186355
+        ],
+        "lambda_values": [
+          0.0,
+          0.5,
+          1.0,
+          1.5,
+          2.0
+        ],
+        "param_values": [
+          -0.006812807360213764,
+          -0.0068216853585422385,
+          -0.006852311628508175,
+          -0.006761598197525698,
+          -0.00674899145872289
+        ]
+      },
+      "per_slobber_dm_log": {
+        "method": "quadratic",
+        "coefficients": [
+          -0.016453312091724587,
+          0.027919187601819564,
+          -1.686655935382055
+        ],
+        "lambda_values": [
+          0.0,
+          0.5,
+          1.0,
+          1.5,
+          2.0
+        ],
+        "param_values": [
+          -1.6838651496111938,
+          -1.682990604310275,
+          -1.6733919703785356,
+          -1.6780136241374093,
+          -1.698822231151701
+        ]
+      },
+      "avg_real_dm_inake_per_weight_per_day_log": {
+        "method": "quadratic",
+        "coefficients": [
+          0.0033470940062842597,
+          -0.011463101107900855,
+          2.5904246330875775
+        ],
+        "lambda_values": [
+          0.0,
+          0.5,
+          1.0,
+          1.5,
+          2.0
+        ],
+        "param_values": [
+          2.5887981041777293,
+          2.589424295729092,
+          2.5803844803633833,
+          2.5794320307427485,
+          2.5818719539325694
+        ]
+      },
+      "day_diff": {
+        "method": "quadratic",
+        "coefficients": [
+          -0.00010734894731800886,
+          0.00024201687919720978,
+          -0.09050258710327208
+        ],
+        "lambda_values": [
+          0.0,
+          0.5,
+          1.0,
+          1.5,
+          2.0
+        ],
+        "param_values": [
+          -0.09052509750956572,
+          -0.09028905582058332,
+          -0.09059093697339042,
+          -0.09020309992653161,
+          -0.09049977799518859
+        ]
+      }
+    }
+  },
+  "correction_summary": {
+    "Intercept": {
+      "naive": -1.9214460217379412,
+      "corrected": -1.948624227619086,
+      "change_percent": 1.41446627038537
+    },
+    "originWeight": {
+      "naive": 0.004435866700041709,
+      "corrected": 0.004416182761125733,
+      "change_percent": -0.44374505022413424
+    },
+    "metabolic_weight": {
+      "naive": -0.006812807360213766,
+      "corrected": -0.0067102572110909016,
+      "change_percent": -1.505255377126154
+    },
+    "per_slobber_dm_log": {
+      "naive": -1.6838651496111943,
+      "corrected": -1.7310284350755991,
+      "change_percent": 2.800894446642291
+    },
+    "avg_real_dm_inake_per_weight_per_day_log": {
+      "naive": 2.588798104177729,
+      "corrected": 2.6052348282017626,
+      "change_percent": 0.6349171840596073
+    },
+    "day_diff": {
+      "naive": -0.09052509750956568,
+      "corrected": -0.0908519529297873,
+      "change_percent": 0.36106607914681765
+    }
+  },
+  "diagnostics": {
+    "normality": {
+      "error": "name 'normal_ad' is not defined"
+    },
+    "breusch_pagan": {
+      "error": "name 'het_breuschpagan' is not defined"
+    },
+    "white_test": {
+      "error": "name 'het_white' is not defined"
+    },
+    "durbin_watson": {
+      "error": "name 'durbin_watson' is not defined"
+    },
+    "vif": {
+      "Intercept": NaN,
+      "originWeight": NaN,
+      "metabolic_weight": NaN,
+      "per_slobber_dm_log": NaN,
+      "avg_real_dm_inake_per_weight_per_day_log": NaN,
+      "day_diff": NaN
+    },
+    "reset": {
+      "error": "name 'linear_reset' is not defined"
+    },
+    "influence": {
+      "error": "name 'OLSInfluence' is not defined"
+    }
+  },
+  "cross_validation": {
+    "mean_r2": 0.06833812142806706,
+    "std_r2": 0.07313091354598474,
+    "mean_mae": 0.8348393926137687,
+    "std_mae": 0.05026151331689343,
+    "mean_rmse": 1.0767763919202973,
+    "std_rmse": 0.07899980336509382,
+    "fold_metrics": {
+      "r2": [
+        0.1479338106811019,
+        -0.04310753321772376,
+        0.14099726271960855,
+        0.07853581820762634,
+        0.01733124874972225
+      ],
+      "mae": [
+        0.7799398962939433,
+        0.7868882499777277,
+        0.881888478455026,
+        0.8206253933510029,
+        0.9048549449911434
+      ],
+      "rmse": [
+        0.994256436455568,
+        1.0215512382360465,
+        1.1160655680576366,
+        1.0395316480629035,
+        1.2124770687893303
+      ]
+    },
+    "n_splits": 5,
+    "corrected": true
+  },
+  "simulation_results": [
+    {
+      "lambda": 0.0,
+      "params": {
+        "Intercept": -1.9214460217379417,
+        "originWeight": 0.004435866700041709,
+        "metabolic_weight": -0.006812807360213764,
+        "per_slobber_dm_log": -1.6838651496111938,
+        "avg_real_dm_inake_per_weight_per_day_log": 2.5887981041777293,
+        "day_diff": -0.09052509750956572
+      },
+      "params_std": {
+        "Intercept": 4.440892098500626e-16,
+        "originWeight": 0.0,
+        "metabolic_weight": 1.734723475976807e-18,
+        "per_slobber_dm_log": 4.440892098500626e-16,
+        "avg_real_dm_inake_per_weight_per_day_log": 4.440892098500626e-16,
+        "day_diff": 4.163336342344337e-17
+      }
+    },
+    {
+      "lambda": 0.5,
+      "params": {
+        "Intercept": -1.9250971320410308,
+        "originWeight": 0.004439082324489787,
+        "metabolic_weight": -0.0068216853585422385,
+        "per_slobber_dm_log": -1.682990604310275,
+        "avg_real_dm_inake_per_weight_per_day_log": 2.589424295729092,
+        "day_diff": -0.09028905582058332
+      },
+      "params_std": {
+        "Intercept": 0.07147897385805464,
+        "originWeight": 0.0001659506389582308,
+        "metabolic_weight": 0.00036086018066566175,
+        "per_slobber_dm_log": 0.05988457426997708,
+        "avg_real_dm_inake_per_weight_per_day_log": 0.06819396176558654,
+        "day_diff": 0.0029358258891244013
+      }
+    },
+    {
+      "lambda": 1.0,
+      "params": {
+        "Intercept": -1.912864826344249,
+        "originWeight": 0.004453715038790213,
+        "metabolic_weight": -0.006852311628508175,
+        "per_slobber_dm_log": -1.6733919703785356,
+        "avg_real_dm_inake_per_weight_per_day_log": 2.5803844803633833,
+        "day_diff": -0.09059093697339042
+      },
+      "params_std": {
+        "Intercept": 0.09719856762774401,
+        "originWeight": 0.0002286921379325474,
+        "metabolic_weight": 0.0005375275718685885,
+        "per_slobber_dm_log": 0.08623973040451739,
+        "avg_real_dm_inake_per_weight_per_day_log": 0.07453344480105903,
+        "day_diff": 0.003958636836649131
+      }
+    },
+    {
+      "lambda": 1.5,
+      "params": {
+        "Intercept": -1.9126277571994925,
+        "originWeight": 0.00441402562976291,
+        "metabolic_weight": -0.006761598197525698,
+        "per_slobber_dm_log": -1.6780136241374093,
+        "avg_real_dm_inake_per_weight_per_day_log": 2.5794320307427485,
+        "day_diff": -0.09020309992653161
+      },
+      "params_std": {
+        "Intercept": 0.12041133056692845,
+        "originWeight": 0.00029495522273236533,
+        "metabolic_weight": 0.0007137796234590239,
+        "per_slobber_dm_log": 0.08865025824400209,
+        "avg_real_dm_inake_per_weight_per_day_log": 0.09974328002549543,
+        "day_diff": 0.004882100836665476
+      }
+    },
+    {
+      "lambda": 2.0,
+      "params": {
+        "Intercept": -1.9233107223433654,
+        "originWeight": 0.00442695244023885,
+        "metabolic_weight": -0.00674899145872289,
+        "per_slobber_dm_log": -1.698822231151701,
+        "avg_real_dm_inake_per_weight_per_day_log": 2.5818719539325694,
+        "day_diff": -0.09049977799518859
+      },
+      "params_std": {
+        "Intercept": 0.13616828923674204,
+        "originWeight": 0.000331120091543642,
+        "metabolic_weight": 0.0006975733444677232,
+        "per_slobber_dm_log": 0.12173975577762929,
+        "avg_real_dm_inake_per_weight_per_day_log": 0.129200404706991,
+        "day_diff": 0.006399277071760068
+      }
+    }
+  ]
+}

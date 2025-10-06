@@ -12,8 +12,14 @@ models = {
     'naive_adg':
     {
         'depended_attr': 'pred_adgLatest_average', 
-        'indpended_attr': ['originWeight', 'daysOnFeedNow', 'metabolic_weight', 'per_slobber_dm_dmi_c',  'avg_real_dm_inake_per_weight_per_day_c',  'day_diff']  
+        'indpended_attr': ['originWeight',  'metabolic_weight', 'per_slobber_dm_log',  'avg_real_dm_inake_per_weight_per_day_log',  'day_diff']  
     },
+    'naive_wg':
+        {
+            'depended_attr': 'pred_weight_gain', 
+            'indpended_attr': ['originWeight',  'metabolic_weight', 'per_slobber_dm_log',  'avg_real_dm_inake_per_weight_per_day_log',  'day_diff']  
+        },
+
 }
 
 

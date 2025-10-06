@@ -1,6 +1,9 @@
+import numpy as np
+
 from data_processor.DataProcessor import DataProcessing
 from base_models.OLSModel import OLSModel
 from base_models.FixedEffectsModel import FixedEffectsModel 
+from base_models.SIMEXModel import SIMEXModel 
 from models.models import models
 
 from utils.filter_utils import filter_few_datapoints
@@ -29,19 +32,17 @@ def main():
             print(f"Processing model '{model_name}' for n = {n}")
             print(f"Dataset has {len(df)} entries")
             print(f"{'='*80}\n")
-            
+          
+            if model_name != 'naive_wg':
+                continue
+
+            assumed_absolute_error = 20
+            err_sd = assumed_absolute_error / np.sqrt(3)
             # Create and fit the OLS model with cross-validation
-            ols_model = FixedEffectsModel(independent_attr, dependent_attr, n, model_name)
-
-            df = filter_few_datapoints(df)
-
-
-            counts = df['cow_id'].value_counts()
-
-            print(counts)
+            ols_model = SIMEXModel(independent_attr, dependent_attr, err_sd, n, model_name)
 
             try:
-                ols_model.fit_with_cv(df, k=5, random_state=234244)
+                ols_model.fit(df)
             except Exception as e:
                 print("-"*20)
                 print(e)
