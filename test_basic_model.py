@@ -12,7 +12,7 @@ from utils.filter_utils import filter_few_datapoints
 
 def main():
     processor = DataProcessing()
-    n_weigings = [1]
+    n_weigings = [3]
     dfs = processor.get_dfs(n_weigings)
     
     # Iterate through each model configuration
@@ -33,13 +33,13 @@ def main():
             print(f"Dataset has {len(df)} entries")
             print(f"{'='*80}\n")
           
-            if model_name != 'naive_wg':
+            if model_name != 'naive_adg':
                 continue
 
-            assumed_absolute_error = 20
+            assumed_absolute_error = 25
             err_sd = assumed_absolute_error / np.sqrt(3)
             # Create and fit the OLS model with cross-validation
-            ols_model = SIMEXModel(independent_attr, dependent_attr, err_sd, n, model_name)
+            ols_model = OLSModel(independent_attr, dependent_attr,  n, model_name)
 
             try:
                 ols_model.fit(df)
