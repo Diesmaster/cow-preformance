@@ -18,6 +18,10 @@ pip3 install -r requirements.txt
 ./unzip.sh
 ```
 
+## conclusion notes:
+  - OLS naive estimation -> o.36 R but very high p values
+  - FixedEffectsModel -> singular matrix -> cows don't very enought from eachother?
+
 
 ## NOTES:
 Medical history was incorrectly recorded, so data about that is unreliable.

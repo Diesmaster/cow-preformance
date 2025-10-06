@@ -1,10 +1,15 @@
 from data_processor.DataProcessor import DataProcessing
 from base_models.OLSModel import OLSModel
+from base_models.FixedEffectsModel import FixedEffectsModel 
 from models.models import models
+
+from utils.filter_utils import filter_few_datapoints
+
+
 
 def main():
     processor = DataProcessing()
-    n_weigings = [3]
+    n_weigings = [1]
     dfs = processor.get_dfs(n_weigings)
     
     # Iterate through each model configuration
@@ -26,9 +31,22 @@ def main():
             print(f"{'='*80}\n")
             
             # Create and fit the OLS model with cross-validation
-            ols_model = OLSModel(independent_attr, dependent_attr, n, model_name)
-            ols_model.fit_with_cv(df, k=5, random_state=42)
-            
+            ols_model = FixedEffectsModel(independent_attr, dependent_attr, n, model_name)
+
+            df = filter_few_datapoints(df)
+
+
+            counts = df['cow_id'].value_counts()
+
+            print(counts)
+
+            try:
+                ols_model.fit_with_cv(df, k=5, random_state=234244)
+            except Exception as e:
+                print("-"*20)
+                print(e)
+                print("-"*20)
+                continue
             # Print summary and diagnostics
             print("\n" + "="*80)
             print("MODEL SUMMARY")
@@ -38,30 +56,36 @@ def main():
             print("\n" + "="*80)
             print("DIAGNOSTIC TESTS")
             print("="*80)
-            ols_model.print_diagnostics(show_arrays=False)
-            
-            # Save results to JSON
-            ols_model.save_results()
-            
-            # Create and save plot
-            ols_model.plot(df, save=True)
-            
-            # Print coefficients
-            print("\n" + "="*80)
-            print("MODEL COEFFICIENTS")
-            print("="*80)
-            print(ols_model.get_coefficients())
-            print("="*80)
-            
-            # Evaluate on full dataset
-            metrics = ols_model.evaluate(df)
-            print("\n" + "="*80)
-            print("EVALUATION METRICS (Full Dataset)")
-            print("="*80)
-            print(f"R²:   {metrics['r2']:.4f}")
-            print(f"MAE:  {metrics['mae']:.4f}")
-            print(f"RMSE: {metrics['rmse']:.4f}")
-            print("="*80)
+            try:
+                ols_model.print_diagnostics(show_arrays=False)
+                
+                # Save results to JSON
+                ols_model.save_results()
+                
+                # Create and save plot
+                ols_model.plot(df, save=True)
+                
+                # Print coefficients
+                print("\n" + "="*80)
+                print("MODEL COEFFICIENTS")
+                print("="*80)
+                print(ols_model.get_coefficients())
+                print("="*80)
+                
+                # Evaluate on full dataset
+                metrics = ols_model.evaluate(df)
+                print("\n" + "="*80)
+                print("EVALUATION METRICS (Full Dataset)")
+                print("="*80)
+                print(f"R²:   {metrics['r2']:.4f}")
+                print(f"MAE:  {metrics['mae']:.4f}")
+                print(f"RMSE: {metrics['rmse']:.4f}")
+                print("="*80)
+            except Exception as e:
+                print('-'*20)
+                print(e)
+                print('-'*20)
+
 
 if __name__ == "__main__":
     main()

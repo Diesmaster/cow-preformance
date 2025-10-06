@@ -7,13 +7,16 @@ import matplotlib.pyplot as plt
 import os
 import json
 
+from base_models.BaseModel import BaseModel
+
 # Additional imports for diagnostics
 from statsmodels.stats.diagnostic import het_breuschpagan, het_white, linear_reset, normal_ad
 from statsmodels.stats.stattools import durbin_watson
 from statsmodels.stats.outliers_influence import variance_inflation_factor, OLSInfluence
 
 
-class OLSModel:
+
+class OLSModel(BaseModel):
     """
     A simple OLS (Ordinary Least Squares) regression model wrapper with automatic diagnostics.
 

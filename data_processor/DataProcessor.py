@@ -8,6 +8,7 @@ import numpy as np
 from data_objects.cow_data import CowData
 from data_objects.feed_history_data import FeedHistoryData
 from data_objects.weight_history_data import WeightHistoryData
+from utils.data_utils import postprocess_orthogonalize
 
 from consts.consts import tdn_table, costs_per_dm, sales_price
 from data_processor.FeedProcessor import FeedProcessor 
@@ -282,28 +283,56 @@ class DataProcessing:
                 window_data = self._process_single_window(
                     cow_data, weight_history, feed_history, x, n_weighing
                 )
-                
+               
                 if window_data is not None:
+                    window_data['cow_id'] = cow_id
                     ret_arr.append(window_data)
         
         return ret_arr
 
-
     def get_dfs(self, n_weighings: list):
-        """
-        Generate DataFrames for multiple n_weighing values.
-        
-        Args:
-            n_weighings (list): List of integers representing different weighing intervals
-            
-        Returns:
-            dict: Dictionary mapping n_weighing values to their corresponding DataFrames
-        """
         for n in n_weighings:
             arr = self.get_variables(n)
-            
             df = pd.DataFrame(arr)
-            
+
+            # === POST-PROCESS: orthogonalize & square ===
+            # Choose variables you want to treat
+            center_poly_cols = [
+                "avg_real_dm_inake_per_weight_per_day",
+                "per_slobber_dm_dmi",
+                "FeedRatio",
+                "total_tdn_dt",
+                "total_tdn_mw_dt",
+            ]
+
+            legendre_cols = [
+                # You can try Legendre instead of centered for some variables:
+                # "avg_dm_intake_per_day",
+                # "feed_cost_per_dm",
+            ]
+
+            df = postprocess_orthogonalize(
+                df,
+                center_poly_cols=center_poly_cols,     # builds *_c and *_c2
+                legendre_cols=legendre_cols,           # builds *_L1 and *_L2
+                drop_original_center_inputs=False,     # keep originals for reference (set True to drop)
+                drop_original_legendre_inputs=False,
+                keep_center_linear=True,               # keep *_c (set False to keep only squared)
+                keep_legendre_L1=True,                 # keep L1 and L2 (set False to keep only L2)
+            )
+
+            # (Optional) If you previously created raw squared/log columns that collide,
+            # you can drop them to avoid multicollinearity:
+            to_drop = [
+                # e.g., raw squared that caused high corr with base:
+                "avg_real_dm_inake_per_weight_per_day_squared",
+                "per_slobber_dm_squared_dmi",
+                "FeedRatio_squared",
+                "total_tdn_dt_squared",
+                "total_tdn_mw_dt_squared",
+            ]
+            df.drop(columns=[c for c in to_drop if c in df.columns], inplace=True, errors="ignore")
+
             self.dfs[n] = df
-        
+
         return self.dfs

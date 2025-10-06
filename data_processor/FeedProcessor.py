@@ -1,5 +1,6 @@
 from datetime import datetime
 from consts.consts import tdn_table, costs_per_dm
+import numpy as np
 
 class FeedProcessor:
     """
@@ -72,6 +73,16 @@ class FeedProcessor:
         self.avg_real_dm_inake_per_mw_per_day = avg_real_dm_inake_per_mw_per_day
         self.avg_weight = avg_weight
         self.avg_mw = avg_weight**0.75
+        
+        # Calculate squared and log transformations for DMI metrics
+        self.avg_dm_intake_per_day_squared = avg_dm_intake_per_day ** 2
+        self.avg_real_dm_inake_per_weight_per_day_squared = avg_real_dm_inake_per_weight_per_day ** 2
+        self.avg_real_dm_inake_per_mw_per_day_squared = avg_real_dm_inake_per_mw_per_day ** 2
+        
+        # Log transformations (handle zero/negative values)
+        self.avg_dm_intake_per_day_log = np.log(avg_dm_intake_per_day) if avg_dm_intake_per_day > 0 else np.nan
+        self.avg_real_dm_inake_per_weight_per_day_log = np.log(avg_real_dm_inake_per_weight_per_day) if avg_real_dm_inake_per_weight_per_day > 0 else np.nan
+        self.avg_real_dm_inake_per_mw_per_day_log = np.log(avg_real_dm_inake_per_mw_per_day) if avg_real_dm_inake_per_mw_per_day > 0 else np.nan
     
     def _calculate_feed_composition(self):
         """Calculate feed composition metrics."""
@@ -137,19 +148,61 @@ class FeedProcessor:
             ((self.total_tdn_dt / self.avg_mw)**3) * 
             self.avg_real_dm_inake_per_weight_per_day
         )
+        
+        # Calculate squared transformations for key feed composition metrics
+        self.silage_dm_squared = silage_dm ** 2
+        self.grass_dm_squared = grass_dm ** 2
+        self.slobber_dm_squared = slobber_dm ** 2
+        self.green_dm_squared = self.green_dm ** 2
+        self.total_tdn_squared = self.total_tdn ** 2
+        self.feed_ratio_squared = self.feed_ratio ** 2
+        self.per_slobber_dm_squared = self.per_slobber_dm ** 2
+        self.per_green_dm_squared = self.per_green_dm ** 2
+        self.feed_cost_squared = self.feed_cost ** 2
+        self.feed_cost_per_dm_squared = self.feed_cost_per_dm ** 2
+        self.total_tdn_dt_squared = self.total_tdn_dt ** 2
+        self.total_tdn_mw_dt_squared = self.total_tdn_mw_dt ** 2
+       
+        # times dmi
+
+        self.per_slobber_dm_squared_dmi = (self.per_slobber_dm ** 2)*self.avg_real_dm_inake_per_weight_per_day
+        self.per_slobber_dm_dmi = (self.per_slobber_dm)*self.avg_real_dm_inake_per_weight_per_day
+
+        # Calculate log transformations for key feed composition metrics
+        self.silage_dm_log = np.log(silage_dm) if silage_dm > 0 else np.nan
+        self.grass_dm_log = np.log(grass_dm) if grass_dm > 0 else np.nan
+        self.slobber_dm_log = np.log(slobber_dm) if slobber_dm > 0 else np.nan
+        self.green_dm_log = np.log(self.green_dm) if self.green_dm > 0 else np.nan
+        self.total_tdn_log = np.log(self.total_tdn) if self.total_tdn > 0 else np.nan
+        self.feed_ratio_log = np.log(self.feed_ratio) if self.feed_ratio > 0 else np.nan
+        self.per_slobber_dm_log = np.log(self.per_slobber_dm) if self.per_slobber_dm > 0 else np.nan
+        self.per_green_dm_log = np.log(self.per_green_dm) if self.per_green_dm > 0 else np.nan
+        self.feed_cost_log = np.log(self.feed_cost) if self.feed_cost > 0 else np.nan
+        self.feed_cost_per_dm_log = np.log(self.feed_cost_per_dm) if self.feed_cost_per_dm > 0 else np.nan
+        self.total_tdn_dt_log = np.log(self.total_tdn_dt) if self.total_tdn_dt > 0 else np.nan
+        self.total_tdn_mw_dt_log = np.log(self.total_tdn_mw_dt) if self.total_tdn_mw_dt > 0 else np.nan
+        self.tdn_silage_log = np.log(self.tdn_silage) if self.tdn_silage > 0 else np.nan
+        self.tdn_rumput_log = np.log(self.tdn_rumput) if self.tdn_rumput > 0 else np.nan
+        self.tdn_slobber_log = np.log(self.tdn_slobber) if self.tdn_slobber > 0 else np.nan
     
     def get_dmi_features(self):
         """
         Get DMI-related features as a dictionary.
         
         Returns:
-            dict: DMI features
+            dict: DMI features including squared and log transformations
         """
         return {
             'total_dm_intake': self.total_dm_intake,
             'avg_dm_intake_per_day': self.avg_dm_intake_per_day,
+            'avg_dm_intake_per_day_squared': self.avg_dm_intake_per_day_squared,
+            'avg_dm_intake_per_day_log': self.avg_dm_intake_per_day_log,
             'avg_real_dm_inake_per_weight_per_day': self.avg_real_dm_inake_per_weight_per_day,
+            'avg_real_dm_inake_per_weight_per_day_squared': self.avg_real_dm_inake_per_weight_per_day_squared,
+            'avg_real_dm_inake_per_weight_per_day_log': self.avg_real_dm_inake_per_weight_per_day_log,
             'avg_real_dm_inake_per_mw_per_day': self.avg_real_dm_inake_per_mw_per_day,
+            'avg_real_dm_inake_per_mw_per_day_squared': self.avg_real_dm_inake_per_mw_per_day_squared,
+            'avg_real_dm_inake_per_mw_per_day_log': self.avg_real_dm_inake_per_mw_per_day_log,
             'avg_weight': self.avg_weight,
             'avg_mw': self.avg_mw,
         }
@@ -159,12 +212,14 @@ class FeedProcessor:
         Get feed composition features as a dictionary.
         
         Returns:
-            dict: Feed composition features, or empty dict if required feeds not present
+            dict: Feed composition features including squared and log transformations, 
+                  or empty dict if required feeds not present
         """
         if not self.has_required_feeds:
             return {}
         
         return {
+            # Original features
             'silage_dm': self.silage_dm,
             'grass_dm': self.grass_dm,
             'slobber_dm': self.slobber_dm,
@@ -188,6 +243,42 @@ class FeedProcessor:
             'tdn_slobber_over_mw_dt': self.tdn_slobber_over_mw_dt,
             'total_tdn_2_dt_dmi': self.total_tdn_2_dt_dmi,
             'total_tdn_3_dt_dmi': self.total_tdn_3_dt_dmi,
+            
+            # Squared features
+            'silage_dm_squared': self.silage_dm_squared,
+            'grass_dm_squared': self.grass_dm_squared,
+            'slobber_dm_squared': self.slobber_dm_squared,
+            'green_dm_squared': self.green_dm_squared,
+            'total_tdn_squared': self.total_tdn_squared,
+            'FeedRatio_squared': self.feed_ratio_squared,
+            'per_slobber_dm_squared': self.per_slobber_dm_squared,
+            'per_green_dm_squared': self.per_green_dm_squared,
+            'feed_cost_squared': self.feed_cost_squared,
+            'feed_cost_per_dm_squared': self.feed_cost_per_dm_squared,
+            'total_tdn_dt_squared': self.total_tdn_dt_squared,
+            'total_tdn_mw_dt_squared': self.total_tdn_mw_dt_squared,
+           
+            # dmi features
+            'per_slobber_dm_dmi':self.per_slobber_dm_dmi,
+            'per_slobber_dm_squared_dmi':self.per_slobber_dm_squared_dmi,
+
+
+            # Log features
+            'silage_dm_log': self.silage_dm_log,
+            'grass_dm_log': self.grass_dm_log,
+            'slobber_dm_log': self.slobber_dm_log,
+            'green_dm_log': self.green_dm_log,
+            'total_tdn_log': self.total_tdn_log,
+            'FeedRatio_log': self.feed_ratio_log,
+            'per_slobber_dm_log': self.per_slobber_dm_log,
+            'per_green_dm_log': self.per_green_dm_log,
+            'feed_cost_log': self.feed_cost_log,
+            'feed_cost_per_dm_log': self.feed_cost_per_dm_log,
+            'total_tdn_dt_log': self.total_tdn_dt_log,
+            'total_tdn_mw_dt_log': self.total_tdn_mw_dt_log,
+            'tdn_silage_log': self.tdn_silage_log,
+            'tdn_rumput_log': self.tdn_rumput_log,
+            'tdn_slobber_log': self.tdn_slobber_log,
         }
     
     def get_all_features(self):
