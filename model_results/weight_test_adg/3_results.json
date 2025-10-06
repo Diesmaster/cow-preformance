@@ -1,5 +1,5 @@
 {
-  "title": "weight_test",
+  "title": "weight_test_adg",
   "n": 3,
   "formula": "pred_adgLatest_average ~ weight",
   "independent_variables": [
