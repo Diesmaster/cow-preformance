@@ -6,7 +6,7 @@ from data_objects.ingredient_data import IngredientData
 from utils.metric_utils import MetricUtils
 from utils.feed_utils import FeedUtils
 from utils.model_utils import ModelUtils
-from models.models import Models 
+from data_models.models import Models 
 
 class RecipeData:
 	"""

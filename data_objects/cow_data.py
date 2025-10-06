@@ -2,7 +2,7 @@ import json
 
 from datetime import datetime, timedelta
 
-from models.models import Models  # Use Models to reference dynamic cow feed history fields
+from data_models.models import Models  # Use Models to reference dynamic cow feed history fields
 from utils.model_utils import ModelUtils
 from utils.dict_utils import DictUtils
 from utils.metric_utils import MetricUtils

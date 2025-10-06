@@ -1,5 +1,5 @@
 import json
-from models.models import Models  # Use Models to reference dynamic ingredient fields
+from data_models.models import Models  # Use Models to reference dynamic ingredient fields
 from utils.model_utils import ModelUtils
 from types import NoneType
 

@@ -1,11 +1,13 @@
 steps:
 
-1. clean data
-2. process the data
-3. make a folder to read out and process the data
+1. clean data --
+2. process the data --
+3. make a folder to read out and process the data --
+---
 4. make code for the models and the statistical tests
-5. write down findings
-6. statistical dashboard
+5. Make a plotter class
+6. write down findings
+7. statistical dashboard
 
 
 ## INSTALL
