@@ -12,6 +12,8 @@ from utils.data_utils import postprocess_orthogonalize
 
 from consts.consts import tdn_table, costs_per_dm, sales_price
 from data_processor.FeedProcessor import FeedProcessor 
+from data_processor.KalmanSmoother import KalmanSmoother
+
 
 class DataProcessing:
     """
@@ -151,8 +153,81 @@ class DataProcessing:
 
         self.objects = self.cast_to_obj(cows, weight_histories, feed_histories )
         return self.objects 
-     
-    def _process_single_window(self, cow_data, weight_history, feed_history, x, n_weighing):
+
+    def apply_kalman_smoothing(self, measurement_noise=400, process_noise=None):
+        """
+        Apply Kalman smoothing to weight data for all cows.
+        This should be called after get_data() but before get_variables().
+        
+        Args:
+            measurement_noise: Expected measurement error variance (default: 400 = 20^2)
+            process_noise: Process noise variance (None = auto-estimate)
+        
+        Returns:
+            dict: Smoothed weight data added to self.objects
+        """
+        if self.objects is None:
+            raise ValueError("Must call get_data() first")
+        
+        print("Applying Kalman smoothing to cow weights...")
+       
+        fix_measurement_noise = False 
+        use_trend = True
+
+        # Create smoother
+        smoother = KalmanSmoother(
+            measurement_noise=measurement_noise,
+            process_noise=process_noise,
+            fix_measurement_noise=fix_measurement_noise,
+            use_trend=use_trend 
+        )
+
+        
+        # Prepare data for smoothing
+        weight_records = []
+        for cow_id, cow_dict in self.objects.items():
+            weight_history = cow_dict['weight_history_data']
+            
+            for idx, entry in enumerate(weight_history.data):
+                weight_records.append({
+                    'cow_id': cow_id,
+                    'date': entry['date'],
+                    'weight': entry['weight'],
+                    'index': idx  # Keep track of original index
+                })
+        
+        # Create DataFrame
+        weight_df = pd.DataFrame(weight_records)
+        weight_df['date'] = pd.to_datetime(weight_df['date'])
+        
+        # Apply smoothing
+        smoothed_df = smoother.filter(
+            df=weight_df,
+            target_attr='weight',
+            group_attr='cow_id',
+            time_attr='date'
+        )
+        
+        # Print summary
+        smoother.print_summary()
+        
+        # Add smoothed weights back to objects
+        for cow_id, cow_dict in self.objects.items():
+            cow_smoothed = smoothed_df[smoothed_df['cow_id'] == cow_id].copy()
+            cow_smoothed = cow_smoothed.sort_values('date').reset_index(drop=True)
+            
+            # Add smoothed values to weight history
+            weight_history = cow_dict['weight_history_data']
+            for i, entry in enumerate(weight_history.data):
+                if i < len(cow_smoothed):
+                    entry['weight_smoothed'] = cow_smoothed.iloc[i]['weight_smoothed']
+                    entry['weight_smoothed_se'] = cow_smoothed.iloc[i]['weight_smoothed_se']
+                    entry['weight_filtered'] = cow_smoothed.iloc[i]['weight_filtered']
+        
+        print("Kalman smoothing complete! Added 'weight_smoothed' to weight history data.")
+        return self.objects
+         
+    def _process_single_window(self, cow_data, weight_history, feed_history, x, n_weighing, use_smoothed=True):
         """
         Processes a single non-overlapping window for a cow.
         
@@ -162,6 +237,7 @@ class DataProcessing:
             feed_history: FeedHistoryData object
             x (int): Starting index in weight history
             n_weighing (int): Number of weighings in this window
+            use_smoothed (bool): If True, use smoothed weights if available
             
         Returns:
             dict or None: Dictionary of features, or None if window should be skipped
@@ -172,6 +248,7 @@ class DataProcessing:
         # ===== SUPER PRIMITIVES =====
         target_weighing = x + n_weighing
         ret_dict['pred_date'] = weight_history.data[target_weighing]['date']
+
         ret_dict['date'] = entry['date']
         
         ret_dict['day_diff'] = (datetime.strptime(ret_dict['pred_date'], "%Y-%m-%d") - 
@@ -180,18 +257,25 @@ class DataProcessing:
       
         ret_dict['theoritical_error_adg'] = 20/ret_dict['day_diff']
 
-        ret_dict['weight'] = entry['weight']
+        # USE SMOOTHED WEIGHT IF AVAILABLE
+        if use_smoothed and 'weight_smoothed' in entry:
+            ret_dict['weight'] = entry['weight_smoothed']
+            ret_dict['weight_raw'] = entry['weight']  # Keep original
+        else:
+            ret_dict['weight'] = entry['weight']
+        
         ret_dict['cattleId'] = cow_data.cattleId
         ret_dict['originWeight'] = cow_data.originWeight
+        ret_dict['hipHeight'] = cow_data.hipHeight
         ret_dict['breed'] = cow_data.breed
-        
+       
         # Breed indicators
         ret_dict['isLimousine'] = (ret_dict['breed'] == 'Limousin')
         ret_dict['isSimental'] = (ret_dict['breed'] == 'Simental')
         
         if ret_dict['breed'] not in ['Limousin', 'Simental']:
             ret_dict['breed'] = 'Other'
-        
+
         ret_dict['entryWeight'] = cow_data.entryWeight
         
         # ===== PROCESS FEED DATA =====
@@ -206,8 +290,19 @@ class DataProcessing:
         ret_dict.update(feed_features)
         
         # ===== TARGET BASICS =====
-        ret_dict['pred_weight'] = weight_history.data[target_weighing]['weight']
+        # USE SMOOTHED PRED_WEIGHT IF AVAILABLE
+        target_entry = weight_history.data[target_weighing]
+        if use_smoothed and 'weight_smoothed' in target_entry:
+            ret_dict['pred_weight'] = target_entry['weight_smoothed']
+            ret_dict['pred_weight_raw'] = target_entry['weight']
+        else:
+            ret_dict['pred_weight'] = target_entry['weight']
+        
+        # NOW ALL THESE CALCULATIONS USE SMOOTHED WEIGHTS
         ret_dict['pred_weight_gain'] = ret_dict['pred_weight'] - ret_dict['weight']
+       
+        if use_smoothed:
+            ret_dict['pred_weight_gain_raw'] = ret_dict['pred_weight_raw'] - ret_dict['weight_raw']
         ret_dict['pred_adgLatest_average'] = ret_dict['pred_weight_gain'] / ret_dict['day_diff']
         ret_dict['pred_adgLatest_average_inverse_hyperbolic'] = (
             np.log(ret_dict['pred_adgLatest_average'] + 
@@ -217,8 +312,8 @@ class DataProcessing:
             (ret_dict['pred_weight_gain'] / ret_dict['total_dm_intake']) * 100
         )
         
-        # ===== PRIMITIVES =====
-        ret_dict['metabolic_weight'] = ret_dict['weight']**0.75
+        # ===== PRIMITIVES (now using smoothed weight) =====
+        ret_dict['metabolic_weight'] = (ret_dict['weight']*0.96)**0.75
         ret_dict['pred_adgLatest_average_mw'] = (
             (ret_dict['pred_weight_gain'] / ret_dict['day_diff']) * ret_dict['metabolic_weight']
         )
@@ -240,6 +335,8 @@ class DataProcessing:
         ret_dict['daysOnFeedNow_2'] = ret_dict['daysOnFeedNow']**2
         ret_dict['daysOnFeed_then'] = ret_dict['daysOnFeedNow'] + ret_dict['day_diff']
         
+        ret_dict['tdn_slobber_daysonfeed'] = ret_dict['tdn_slobber_over_mw_dt']*ret_dict['daysOnFeedNow']
+
         ret_dict['originWeight_ddmi'] = ret_dict['originWeight'] / ret_dict['avg_dm_intake_per_day']
         
         # Breed-specific with ddmi
@@ -248,20 +345,19 @@ class DataProcessing:
                 ret_dict[f'metabolic_weight_{breed_name}'] / ret_dict['avg_dm_intake_per_day']
             )
         
-        # Filter by minimum days on feed and breed
-        if ret_dict['daysOnFeedNow'] < 10 or ret_dict['breed'] == 'Other':
+        if ret_dict['breed'] == 'Other':
             return None
-        
+
         return ret_dict
 
-
-    def get_variables(self, n_weighing):
+    def get_variables(self, n_weighing, use_smoothed=True):
         """
         Processes cow data objects to extract features for modeling.
         Uses non-overlapping windows to ensure statistical independence.
         
         Args:
             n_weighing (int): Number of weighings ahead to predict
+            use_smoothed (bool): If True, use smoothed weights from apply_kalman_smoothing()
         
         Returns:
             list: List of dictionaries containing features for each observation
@@ -271,6 +367,8 @@ class DataProcessing:
 
         ret_arr = []
 
+        total_limo = 0
+        total_sim = 0
         for cow_id, cow_dict in self.objects.items():
             cow_data = cow_dict['cow_data']
             weight_history = cow_dict['weight_history_data']
@@ -279,63 +377,59 @@ class DataProcessing:
             # Skip if no feed history
             if feed_history is None:
                 continue
+           
+            last_window = None
+            time = 0
             
-            # Iterate through weight history using non-overlapping windows
-            for x in range(0, len(weight_history.data) - n_weighing, n_weighing):
+            print(f"cow_id: {cow_id}, breed: {cow_data.breed}")
+
+
+            for x in range(3, len(weight_history.data) - n_weighing, n_weighing):
+
+
                 window_data = self._process_single_window(
-                    cow_data, weight_history, feed_history, x, n_weighing
+                    cow_data, weight_history, feed_history, x, n_weighing, 
+                    use_smoothed=use_smoothed
                 )
-               
-                if window_data is not None:
-                    window_data['cow_id'] = cow_id
-                    ret_arr.append(window_data)
-        
+              
+                if window_data is None:
+                    continue
+                
+                window_data['cow_id'] = cow_id
+                window_data['time'] = time
+                time += 1
+                ret_arr.append(window_data)
+            
+                last_window = window_data
+
         return ret_arr
 
-    def get_dfs(self, n_weighings: list):
+    def get_dfs(self, n_weighings: list, measurement_noise=400, apply_smoothing=True):
+        """
+        Generate dataframes with optional Kalman smoothing applied BEFORE feature engineering.
+        
+        Args:
+            n_weighings: List of prediction horizons
+            measurement_noise: Expected measurement error variance
+            apply_smoothing: If True, applies Kalman smoothing to raw weights first
+        """
+        # STEP 0: Load data first if not already loaded
+        if self.objects is None:
+            self.get_data()
+
+        # STEP 1: Apply smoothing to raw weight data if requested
+        if apply_smoothing:
+            print("\n=== Applying Kalman smoothing to raw weight data ===")
+            self.apply_kalman_smoothing(measurement_noise=measurement_noise)
+        
+        # STEP 2: Generate features (will use smoothed weights if available)
         for n in n_weighings:
-            arr = self.get_variables(n)
+            print(f"\n=== Generating features for n={n} ===")
+            arr = self.get_variables(n, use_smoothed=apply_smoothing)
             df = pd.DataFrame(arr)
 
-            # === POST-PROCESS: orthogonalize & square ===
-            # Choose variables you want to treat
-            center_poly_cols = [
-                "avg_real_dm_inake_per_weight_per_day",
-                "per_slobber_dm_dmi",
-                "per_slobber_dm",
-                "FeedRatio",
-                "total_tdn_dt",
-                "total_tdn_mw_dt",
-            ]
-
-            legendre_cols = [
-                # You can try Legendre instead of centered for some variables:
-                # "avg_dm_intake_per_day",
-                # "feed_cost_per_dm",
-            ]
-
-            df = postprocess_orthogonalize(
-                df,
-                center_poly_cols=center_poly_cols,     # builds *_c and *_c2
-                legendre_cols=legendre_cols,           # builds *_L1 and *_L2
-                drop_original_center_inputs=False,     # keep originals for reference (set True to drop)
-                drop_original_legendre_inputs=False,
-                keep_center_linear=True,               # keep *_c (set False to keep only squared)
-                keep_legendre_L1=True,                 # keep L1 and L2 (set False to keep only L2)
-            )
-
-            # (Optional) If you previously created raw squared/log columns that collide,
-            # you can drop them to avoid multicollinearity:
-            to_drop = [
-                # e.g., raw squared that caused high corr with base:
-                "avg_real_dm_inake_per_weight_per_day_squared",
-                "per_slobber_dm_squared_dmi",
-                "FeedRatio_squared",
-                "total_tdn_dt_squared",
-                "total_tdn_mw_dt_squared",
-            ]
-            df.drop(columns=[c for c in to_drop if c in df.columns], inplace=True, errors="ignore")
+            df['pred_date'] = pd.to_datetime(df['pred_date'])
 
             self.dfs[n] = df
-
+        
         return self.dfs

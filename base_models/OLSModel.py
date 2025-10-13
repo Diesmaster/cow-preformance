@@ -46,8 +46,10 @@ class OLSModel(BaseModel):
         self.diagnostics = None
 
     def _build_formula(self):
-        """Build the regression formula."""
-        self.formula = f"{self.dependent_attr} ~ {' + '.join(self.independent_attrs)}"
+        """Build the regression formula with cow fixed effects."""
+        # Add categorical term for cow_id
+        fixed_effects_term = "C(cow_id)"
+        self.formula = f"{self.dependent_attr} ~ {' + '.join(self.independent_attrs)} + {fixed_effects_term}"
         return self.formula
 
     def fit(self, df):
@@ -61,7 +63,7 @@ class OLSModel(BaseModel):
             self: Returns self for method chaining
         """
         # Drop missing values
-        required_cols = self.independent_attrs + [self.dependent_attr]
+        required_cols = self.independent_attrs + [self.dependent_attr] + ['cow_id']
         df_clean = df[required_cols].dropna()
 
         # Build and fit the model

@@ -21,6 +21,9 @@ pip3 install -r requirements.txt
 ## conclusion notes:
   - OLS naive estimation -> o.36 R but very high p values
   - FixedEffectsModel -> singular matrix -> cows don't very enought from eachother?
+  - SIMEX to get rid of measurement errors did not work.
+  - Kalman filter to get rid of measurement errors -> did work.
+
 
 
 ## NOTES:

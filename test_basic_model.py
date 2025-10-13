@@ -3,16 +3,41 @@ import numpy as np
 from data_processor.DataProcessor import DataProcessing
 from base_models.OLSModel import OLSModel
 from base_models.FixedEffectsModel import FixedEffectsModel 
+from base_models.PanelOLS import PanelOLSModel 
 from base_models.SIMEXModel import SIMEXModel 
 from models.models import models
 
 from utils.filter_utils import filter_few_datapoints
 
+def run_model(df, independent_attr, dependent_attr, n, prefix, model_name):
+    
+    model_name = f'{prefix}_{model_name}'
 
+    ols_model = PanelOLSModel(independent_attr, dependent_attr, n, model_name)
+    df = df[df['pred_adgLatest_average'] >= 0]
+    try:
+        ols_model.fit(df)
+        
+        print('='*20)
+        print(f"title: {model_name}")
+        ols_model.summary()
+        print('='*20)
+        # ols_model.print_diagnostics(show_arrays=False)
+        
+        # Save results to JSON
+        ols_model.save_results()
+        
+        # Create and save plot
+        ols_model.plot(df, save=True)
+        
+    except Exception as e:
+        print("-"*20)
+        print(e)
+        print("-"*20)
 
 def main():
     processor = DataProcessing()
-    n_weigings = [3]
+    n_weigings = [1]
     dfs = processor.get_dfs(n_weigings)
     
     # Iterate through each model configuration
@@ -28,65 +53,25 @@ def main():
         
         # Iterate through each dataset
         for n, df in dfs.items():
+            if model_name == 'simental_book_adg_1':
+                df_simental = df[df['breed'] == 'Simental'].copy()
+                run_model(df_simental, independent_attr, dependent_attr, n, '', model_name)
+            if model_name != 'book_adg_1':
+                continue
+
             print(f"\n{'='*80}")
             print(f"Processing model '{model_name}' for n = {n}")
             print(f"Dataset has {len(df)} entries")
             print(f"{'='*80}\n")
           
-            if model_name != 'naive_adg':
-                continue
+            df_limousin = df[df['breed'] == 'Limousin'].copy()
+            df_limousin = df_limousin[df_limousin['tdn_slobber_over_mw_dt']  <= 0.10]
 
-            assumed_absolute_error = 25
+            assumed_absolute_error = 20/30 
             err_sd = assumed_absolute_error / np.sqrt(3)
             # Create and fit the OLS model with cross-validation
-            ols_model = OLSModel(independent_attr, dependent_attr,  n, model_name)
+            run_model(df_limousin, independent_attr, dependent_attr, n, 'Limousin', model_name)
 
-            try:
-                ols_model.fit(df)
-            except Exception as e:
-                print("-"*20)
-                print(e)
-                print("-"*20)
-                continue
-            # Print summary and diagnostics
-            print("\n" + "="*80)
-            print("MODEL SUMMARY")
-            print("="*80)
-            ols_model.summary()
             
-            print("\n" + "="*80)
-            print("DIAGNOSTIC TESTS")
-            print("="*80)
-            try:
-                ols_model.print_diagnostics(show_arrays=False)
-                
-                # Save results to JSON
-                ols_model.save_results()
-                
-                # Create and save plot
-                ols_model.plot(df, save=True)
-                
-                # Print coefficients
-                print("\n" + "="*80)
-                print("MODEL COEFFICIENTS")
-                print("="*80)
-                print(ols_model.get_coefficients())
-                print("="*80)
-                
-                # Evaluate on full dataset
-                metrics = ols_model.evaluate(df)
-                print("\n" + "="*80)
-                print("EVALUATION METRICS (Full Dataset)")
-                print("="*80)
-                print(f"R²:   {metrics['r2']:.4f}")
-                print(f"MAE:  {metrics['mae']:.4f}")
-                print(f"RMSE: {metrics['rmse']:.4f}")
-                print("="*80)
-            except Exception as e:
-                print('-'*20)
-                print(e)
-                print('-'*20)
-
-
 if __name__ == "__main__":
     main()

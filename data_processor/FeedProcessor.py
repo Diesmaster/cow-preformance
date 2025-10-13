@@ -112,7 +112,11 @@ class FeedProcessor:
         self.tdn_rumput = grass_dm * tdn_table['grass']
         self.tdn_slobber = slobber_dm * tdn_table['slobber']
         self.total_tdn = self.tdn_slobber + self.tdn_silage + self.tdn_rumput
-        
+       
+        self.per_slobber_tdn = self.tdn_slobber/self.total_tdn 
+        self.per_rumput_tdn = self.tdn_rumput/self.total_tdn 
+        self.per_silage_tdn = self.tdn_silage/self.total_tdn 
+
         # Feed ratios and percentages
         self.feed_ratio = self.green_dm / self.slobber_dm if self.slobber_dm > 0 else 0
         self.per_slobber_dm = self.slobber_dm / self.total_dm_intake if self.total_dm_intake > 0 else 0
@@ -135,11 +139,28 @@ class FeedProcessor:
         # TDN per day and metabolic weight
         self.total_tdn_dt = self.total_tdn / self.day_diff
         self.total_tdn_mw_dt = self.total_tdn / self.day_diff / self.avg_mw
+        self.total_tdn_mw = self.total_tdn /  self.avg_mw
+       
+        self.tdn_silage_dt = self.tdn_silage / self.day_diff
+        self.tdn_rumput_dt = self.tdn_rumput / self.day_diff
+        self.tdn_slobber_dt = self.tdn_slobber / self.day_diff
+
         
+        self.total_tdn_greens = self.tdn_silage + self.tdn_rumput
+
+        self.total_tdn_greens_over_mw = (self.total_tdn_greens / self.avg_mw)
+        self.total_tdn_greens_over_mw_dt = (self.total_tdn_greens / self.avg_mw) / self.day_diff
+
+
         self.tdn_silage_over_mw_dt = (self.tdn_silage / self.avg_mw) / self.day_diff
         self.tdn_rumput_over_mw_dt = (self.tdn_rumput / self.avg_mw) / self.day_diff
         self.tdn_slobber_over_mw_dt = (self.tdn_slobber / self.avg_mw) / self.day_diff
         
+        self.tdn_silage_over_mw = (self.tdn_silage / self.avg_mw)
+        self.tdn_rumput_over_mw = (self.tdn_rumput / self.avg_mw) 
+        self.tdn_slobber_over_mw = (self.tdn_slobber / self.avg_mw) 
+        
+
         self.total_tdn_2_dt_dmi = (
             ((self.total_tdn_dt / self.avg_mw)**2) * 
             self.avg_real_dm_inake_per_weight_per_day
@@ -161,6 +182,9 @@ class FeedProcessor:
         self.feed_cost_squared = self.feed_cost ** 2
         self.feed_cost_per_dm_squared = self.feed_cost_per_dm ** 2
         self.total_tdn_dt_squared = self.total_tdn_dt ** 2
+        self.total_tdn_3_dt = self.total_tdn_mw_dt ** 3
+        self.total_tdn_2 = self.total_tdn_mw ** 2
+        self.total_tdn_3 = self.total_tdn_mw ** 3
         self.total_tdn_mw_dt_squared = self.total_tdn_mw_dt ** 2
        
         # times dmi
@@ -228,6 +252,9 @@ class FeedProcessor:
             'total_tdn': self.total_tdn,
             'FeedRatio': self.feed_ratio,
             'per_slobber_dm': self.per_slobber_dm,
+            'per_slobber_tdn': self.per_slobber_tdn,
+            'per_rumput_tdn': self.per_rumput_tdn,
+            'per_silage_tdn': self.per_silage_tdn,
             'per_green_dm': self.per_green_dm,
             'greens_cost_per_kg': self.greens_cost_per_kg,
             'greens_cost': self.greens_cost,
@@ -236,9 +263,23 @@ class FeedProcessor:
             'feed_cost_per_dm': self.feed_cost_per_dm,
             'total_tdn_dt': self.total_tdn_dt,
             'total_tdn_mw_dt': self.total_tdn_mw_dt,
+            'total_tdn_mw': self.total_tdn_mw,
+            'tdn_silage_dt': self.tdn_silage_dt,
+            'tdn_rumput_dt': self.tdn_rumput_dt,
+            'tdn_slobber_dt': self.tdn_slobber_dt,
+            'total_tdn_greens_over_mw': self.total_tdn_greens_over_mw,
+            'total_tdn_greens_over_mw_dt': self.total_tdn_greens_over_mw_dt,
             'tdn_silage_over_mw_dt': self.tdn_silage_over_mw_dt,
             'tdn_rumput_over_mw_dt': self.tdn_rumput_over_mw_dt,
             'tdn_slobber_over_mw_dt': self.tdn_slobber_over_mw_dt,
+            'tdn_silage_over_mw': self.tdn_silage_over_mw,
+            'tdn_rumput_over_mw': self.tdn_rumput_over_mw,
+            'silage_rumput_mw': self.tdn_silage_over_mw*self.tdn_rumput_over_mw,
+            'greens_slobber_mw': self.total_tdn_greens_over_mw/self.tdn_slobber_over_mw,
+
+            'greens_slobber_mw_2': (self.total_tdn_greens_over_mw/self.tdn_slobber_over_mw),
+            'tdn_slobber_over_mw': self.tdn_slobber_over_mw,
+            'tdn_slobber_over_mw_2': self.tdn_slobber_over_mw**2,
             'total_tdn_2_dt_dmi': self.total_tdn_2_dt_dmi,
             'total_tdn_3_dt_dmi': self.total_tdn_3_dt_dmi,
             
@@ -253,8 +294,15 @@ class FeedProcessor:
             'per_green_dm_squared': self.per_green_dm_squared,
             'feed_cost_squared': self.feed_cost_squared,
             'feed_cost_per_dm_squared': self.feed_cost_per_dm_squared,
-            'total_tdn_dt_squared': self.total_tdn_dt_squared,
-            'total_tdn_mw_dt_squared': self.total_tdn_mw_dt_squared,
+            'tdn_silage_over_mw_dt_2': self.tdn_silage_over_mw_dt**2,
+            'tdn_rumput_over_mw_dt_2': self.tdn_rumput_over_mw_dt**2,
+            'tdn_slobber_over_mw_dt_2': self.tdn_slobber_over_mw_dt**2,
+            'total_tdn_dt_2': self.total_tdn_dt_squared,
+            'total_tdn_dt_3': self.total_tdn_dt**3,
+            'total_tdn_mw_dt_3': self.total_tdn_3_dt,
+            'total_tdn_mw_dt_2': self.total_tdn_mw_dt_squared,
+            'total_tdn_mw_3': self.total_tdn_3,
+            'total_tdn_mw_2': self.total_tdn_2,
            
             # dmi features
             'per_slobber_dm_dmi':self.per_slobber_dm_dmi,
@@ -270,6 +318,7 @@ class FeedProcessor:
             'per_green_dm_log': self.per_green_dm_log,
             'feed_cost_log': self.feed_cost_log,
             'feed_cost_per_dm_log': self.feed_cost_per_dm_log,
+            'tdn_slobber_over_mw_dt_log': np.log(self.tdn_slobber_over_mw_dt),
             'total_tdn_dt_log': self.total_tdn_dt_log,
             'total_tdn_mw_dt_log': self.total_tdn_mw_dt_log,
             'tdn_silage_log': self.tdn_silage_log,
