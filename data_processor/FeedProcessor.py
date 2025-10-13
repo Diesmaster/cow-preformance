@@ -266,6 +266,7 @@ class FeedProcessor:
             'total_tdn_mw': self.total_tdn_mw,
             'tdn_silage_dt': self.tdn_silage_dt,
             'tdn_rumput_dt': self.tdn_rumput_dt,
+            'silage_x_rumput_tdn': self.tdn_rumput_over_mw_dt*self.tdn_slobber_over_mw_dt,
             'tdn_slobber_dt': self.tdn_slobber_dt,
             'total_tdn_greens_over_mw': self.total_tdn_greens_over_mw,
             'total_tdn_greens_over_mw_dt': self.total_tdn_greens_over_mw_dt,

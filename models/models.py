@@ -27,7 +27,7 @@ models = {
     'book_adg_1':
     {
         'depended_attr': 'pred_adgLatest_average', 
-        'indpended_attr':   [ 'metabolic_weight', 'tdn_silage_over_mw_dt', 'tdn_rumput_over_mw_dt', 'tdn_slobber_over_mw_dt',  'day_diff']
+        'indpended_attr':   [ 'metabolic_weight', 'tdn_silage_over_mw_dt', 'tdn_rumput_over_mw_dt', 'tdn_slobber_over_mw_dt', 'day_diff']
     },
     'simental_book_adg_1':
     {
