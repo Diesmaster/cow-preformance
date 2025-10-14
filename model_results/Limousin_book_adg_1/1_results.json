@@ -10,52 +10,50 @@
     "tdn_silage_over_mw_dt",
     "tdn_rumput_over_mw_dt",
     "tdn_slobber_over_mw_dt",
-    "silage_x_rumput_tdn",
     "day_diff"
   ],
   "dependent_variable": "pred_adgLatest_average",
   "summary": {
-    "r2": 0.4702913850112225,
-    "r2_within": 0.4702913850112225,
-    "r2_between": -3.7108203067197767,
-    "r2_overall": -3.822954279488167,
-    "f_statistic": 32.1098643227961,
+    "r2": 0.4605364906577194,
+    "r2_within": 0.4605364906577194,
+    "r2_between": -3.515704299448492,
+    "r2_overall": -3.519416472536105,
+    "f_statistic": 37.39177523870225,
     "f_pvalue": 1.1102230246251565e-16,
     "n_entities": 16,
-    "n_obs": 239
+    "n_obs": 240,
+    "mean_fixed_effect": 0.9836460841074894
   },
   "coefficients": {
-    "metabolic_weight": -0.01574655600631186,
-    "tdn_silage_over_mw_dt": 17.749946367580588,
-    "tdn_rumput_over_mw_dt": 192.33583531119982,
-    "tdn_slobber_over_mw_dt": 7.987666493162467,
-    "silage_x_rumput_tdn": -2670.8442778624685,
-    "day_diff": -0.05839190633067588
+    "metabolic_weight": -0.015801615491188907,
+    "tdn_silage_over_mw_dt": 19.06240150232294,
+    "tdn_rumput_over_mw_dt": 31.03458869036946,
+    "tdn_slobber_over_mw_dt": 7.697371682311849,
+    "day_diff": -0.048692111890516046
   },
   "std_errors": {
-    "metabolic_weight": 0.004954863319024626,
-    "tdn_silage_over_mw_dt": 8.351853227736258,
-    "tdn_rumput_over_mw_dt": 70.28410925398853,
-    "tdn_slobber_over_mw_dt": 4.616279199056892,
-    "silage_x_rumput_tdn": 1134.7123184958689,
-    "day_diff": 0.009000827949836445
+    "metabolic_weight": 0.005002471604527248,
+    "tdn_silage_over_mw_dt": 8.361212733968385,
+    "tdn_rumput_over_mw_dt": 11.911615551343505,
+    "tdn_slobber_over_mw_dt": 4.4648939074297,
+    "day_diff": 0.00968181072272973
   },
   "pvalues": {
-    "metabolic_weight": 0.0016991792507019543,
-    "tdn_silage_over_mw_dt": 0.03469469208717224,
-    "tdn_rumput_over_mw_dt": 0.00672316383910565,
-    "tdn_slobber_over_mw_dt": 0.08499379097717763,
-    "silage_x_rumput_tdn": 0.019477861851961098,
-    "day_diff": 5.825568916151269e-10
+    "metabolic_weight": 0.0018079337048588773,
+    "tdn_silage_over_mw_dt": 0.023578812184103848,
+    "tdn_rumput_over_mw_dt": 0.00980572623556708,
+    "tdn_slobber_over_mw_dt": 0.08612327717251067,
+    "day_diff": 1.024218610368166e-06
   },
   "diagnostics": {
     "residual_normality": {
-      "anderson_darling_stat": 2.417020903675251,
-      "pvalue": 3.9588189771373276e-06
+      "anderson_darling_stat": 2.617151420034247,
+      "pvalue": 1.282518440450801e-06
     },
-    "durbin_watson": 1.175099415864924,
+    "durbin_watson": 1.1714831759251383,
     "n_entities": 16,
-    "n_obs": 239
+    "n_obs": 240,
+    "mean_fixed_effect": 0.9836460841074894
   },
   "cross_validation": null
 }

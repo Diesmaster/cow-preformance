@@ -70,6 +70,8 @@ class PanelOLSModel(BaseModel):
         if self.entity_effects:
             self._entity_means = y.groupby(level=0).mean()
             self._grand_mean = y.mean()
+            # Calculate mean fixed effect
+            self._mean_fixed_effect = self._entity_means.mean()
         
         # Basic diagnostics on residuals
         try:
@@ -82,6 +84,7 @@ class PanelOLSModel(BaseModel):
                 "durbin_watson": float(dw),
                 "n_entities": int(self.results.entity_info.total),
                 "n_obs": int(self.results.nobs),
+                "mean_fixed_effect": float(self._mean_fixed_effect) if self.entity_effects else None,
             }
         except Exception as e:
             self.diagnostics = {"error": str(e)}
@@ -266,6 +269,17 @@ class PanelOLSModel(BaseModel):
         if self.results is None:
             raise ValueError("Model must be fitted before viewing summary")
         print(self.results)
+        
+        # Print mean fixed effect
+        if self.entity_effects and hasattr(self, '_mean_fixed_effect'):
+            print("\n" + "=" * 60)
+            print("Fixed Effects Summary:")
+            print("=" * 60)
+            print(f"Mean Fixed Effect: {self._mean_fixed_effect:.4f}")
+            print(f"Number of Entities: {len(self._entity_means)}")
+            print(f"Entities: {self._entity_means}")
+            print("=" * 60)
+        
         if self.cv_results is not None:
             print("\n" + "=" * 60)
             print("Cross-Validation Results:")
@@ -295,6 +309,11 @@ class PanelOLSModel(BaseModel):
             if dw is not None:
                 print(f"Durbin-Watson: {float(dw):.4f} (≈2 => no autocorrelation)")
             print(f"Entities: {d.get('n_entities')}, Observations: {d.get('n_obs')}")
+            
+            # Print mean fixed effect
+            mean_fe = d.get("mean_fixed_effect", None)
+            if mean_fe is not None:
+                print(f"Mean Fixed Effect: {mean_fe:.4f}")
         print("=" * 60)
 
     def save_results(self):
@@ -302,7 +321,7 @@ class PanelOLSModel(BaseModel):
         if self.results is None:
             raise ValueError("Model must be fitted before saving results")
 
-        results_dir = os.path.join("model_results", self.title)
+        results_dir = os.path.join("model_results", f"PanelOLS_{self.title}")
         os.makedirs(results_dir, exist_ok=True)
 
         payload = {
@@ -323,6 +342,7 @@ class PanelOLSModel(BaseModel):
                 "f_pvalue": float(self.results.f_statistic.pval),
                 "n_entities": int(self.results.entity_info.total),
                 "n_obs": int(self.results.nobs),
+                "mean_fixed_effect": float(self._mean_fixed_effect) if self.entity_effects else None,
             },
             "coefficients": {k: float(v) for k, v in self.results.params.items()},
             "std_errors": {k: float(v) for k, v in self.results.std_errors.items()},
@@ -386,3 +406,11 @@ class PanelOLSModel(BaseModel):
         if self.results is None:
             raise ValueError("Model must be fitted before accessing coefficients")
         return self.results.params
+
+    def get_mean_fixed_effect(self):
+        """Return the mean fixed effect across all entities."""
+        if self.results is None:
+            raise ValueError("Model must be fitted before accessing mean fixed effect")
+        if not self.entity_effects:
+            raise ValueError("Model was not fitted with entity effects")
+        return self._mean_fixed_effect

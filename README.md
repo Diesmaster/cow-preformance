@@ -30,5 +30,21 @@ pip3 install -r requirements.txt
 Medical history was incorrectly recorded, so data about that is unreliable.
 Cow with ID: rexFmUY8QHCvB0TsjnbB had major issues so is left out of the analysis.
 
+## NOTES:
+Neg required = a * weight + adg^2
+Neg required (Negr) = a * weight + (Neg/Negr)^2
+Neg required (Negr) = a * weight + Neg^2/Negr^2
+Neg required (Negr) = a * weight + Neg^2/Negr^2
 
+0 = a * weight + Neg^2/Negr^2 - Negr 
+
+which gives approx:
+
+negr = a * weight neg^2(a * weight)^2
+
+or if weight is small
+
+Negr = Neg^2/3
+
+sinds average pref on the cow farm is 1 adg -> negr = neg per day
 

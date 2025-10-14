@@ -254,6 +254,7 @@ class DataProcessing:
         ret_dict['day_diff'] = (datetime.strptime(ret_dict['pred_date'], "%Y-%m-%d") - 
                                datetime.strptime(ret_dict['date'], "%Y-%m-%d")).days
         ret_dict['day_diff_2'] = ret_dict['day_diff']**2
+        ret_dict['day_diff_recp'] = ret_dict['day_diff']**2
       
         ret_dict['theoritical_error_adg'] = 20/ret_dict['day_diff']
 
@@ -268,11 +269,16 @@ class DataProcessing:
         ret_dict['originWeight'] = cow_data.originWeight
         ret_dict['hipHeight'] = cow_data.hipHeight
         ret_dict['breed'] = cow_data.breed
+
+        #if ret_dict['breed'] == 'Limousin X':
+        #    ret_dict['breed'] = 'Limousin'
+
        
         # Breed indicators
         ret_dict['isLimousine'] = (ret_dict['breed'] == 'Limousin')
         ret_dict['isSimental'] = (ret_dict['breed'] == 'Simental')
-        
+       
+
         if ret_dict['breed'] not in ['Limousin', 'Simental']:
             ret_dict['breed'] = 'Other'
 
@@ -288,7 +294,8 @@ class DataProcessing:
         # Get all feed features
         feed_features = feed_processor.get_all_features()
         ret_dict.update(feed_features)
-        
+       
+
         # ===== TARGET BASICS =====
         # USE SMOOTHED PRED_WEIGHT IF AVAILABLE
         target_entry = weight_history.data[target_weighing]
@@ -345,6 +352,14 @@ class DataProcessing:
                 ret_dict[f'metabolic_weight_{breed_name}'] / ret_dict['avg_dm_intake_per_day']
             )
         
+
+        ret_dict['mw_per_ddmi'] = ret_dict['metabolic_weight']/ret_dict['avg_dm_intake_per_day']
+        ret_dict['mw_dmi_dt'] = (ret_dict['metabolic_weight']*ret_dict['total_dmi'])/ret_dict['day_diff']
+
+        ret_dict['day_diff_2_dmi'] = ret_dict['day_diff_2'] * ret_dict['total_dmi']
+        ret_dict['day_diff_dmi'] = ret_dict['day_diff'] * ret_dict['total_dmi']
+
+        ret_dict['mw_dmi'] = (ret_dict['metabolic_weight']*ret_dict['total_dmi'])
         if ret_dict['breed'] == 'Other':
             return None
 
@@ -395,7 +410,7 @@ class DataProcessing:
                 if window_data is None:
                     continue
                 
-                window_data['cow_id'] = cow_id
+                window_data['cow_id'] = cow_data.cattleId 
                 window_data['time'] = time
                 time += 1
                 ret_arr.append(window_data)

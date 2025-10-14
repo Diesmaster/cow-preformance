@@ -14,6 +14,21 @@ def run_model(df, independent_attr, dependent_attr, n, prefix, model_name):
     model_name = f'{prefix}_{model_name}'
 
     ols_model = PanelOLSModel(independent_attr, dependent_attr, n, model_name)
+
+    # Print the kicked out data points before filtering
+    kicked_out = df[df['pred_adgLatest_average'] < 0]
+    if len(kicked_out) > 0:
+        print(f"\n⚠️ Removing {len(kicked_out)} data points with negative pred_adgLatest_average:")
+        print("=" * 60)
+        for idx, row in kicked_out.iterrows():
+            cow_id = row.get('cow_id', row.get('cattleId', 'Unknown'))
+            date = row.get('pred_date', row.get('date', 'Unknown'))
+            value = row['pred_adgLatest_average']
+            print(f"  Cow: {cow_id:20s} | Date: {str(date):20s} | Value: {value:.4f}")
+        print("=" * 60)
+    else:
+        print("✅ No negative pred_adgLatest_average values found.")
+
     df = df[df['pred_adgLatest_average'] >= 0]
     try:
         ols_model.fit(df)
@@ -42,6 +57,10 @@ def main():
     
     # Iterate through each model configuration
     for model_name, model_config in models.items():
+        if 'pass' in model_config:
+            if model_config['pass'] == True:
+                continue
+
         dependent_attr = model_config['depended_attr']
         independent_attr = model_config['indpended_attr']
         
@@ -53,24 +72,21 @@ def main():
         
         # Iterate through each dataset
         for n, df in dfs.items():
-            if model_name == 'simental_book_adg_1':
+            if model_name.startswith('simental'):
                 df_simental = df[df['breed'] == 'Simental'].copy()
                 run_model(df_simental, independent_attr, dependent_attr, n, '', model_name)
-            if model_name != 'book_adg_1':
-                continue
+            if model_name.startswith('limousine'):
+                print(f"\n{'='*80}")
+                print(f"Processing model '{model_name}' for n = {n}")
+                print(f"Dataset has {len(df)} entries")
+                print(f"{'='*80}\n")
+              
+                df_limousin = df[df['breed'].isin(['Limousin' ])].copy()
 
-            print(f"\n{'='*80}")
-            print(f"Processing model '{model_name}' for n = {n}")
-            print(f"Dataset has {len(df)} entries")
-            print(f"{'='*80}\n")
-          
-            df_limousin = df[df['breed'] == 'Limousin'].copy()
-            df_limousin = df_limousin[df_limousin['tdn_slobber_over_mw_dt']  <= 0.10]
-
-            assumed_absolute_error = 20/30 
-            err_sd = assumed_absolute_error / np.sqrt(3)
-            # Create and fit the OLS model with cross-validation
-            run_model(df_limousin, independent_attr, dependent_attr, n, 'Limousin', model_name)
+                assumed_absolute_error = 20/30 
+                err_sd = assumed_absolute_error / np.sqrt(3)
+                # Create and fit the OLS model with cross-validation
+                run_model(df_limousin, independent_attr, dependent_attr, n, 'Limousin', model_name)
 
             
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 from datetime import datetime
-from consts.consts import tdn_table, costs_per_dm
+from consts.consts import pk_table, tdn_table, costs_per_dm
 import numpy as np
 
 class FeedProcessor:
@@ -102,6 +102,10 @@ class FeedProcessor:
         grass_dm = ration.get('Rumput', {}).get('asFedIntakePerCow', 0) * 0.2
         slobber_dm = ration['Slobber Mix']['asFedIntakePerCow'] * 0.4506
         
+        self.dm_total = silage_dm + grass_dm + slobber_dm
+        self.dm_total_dt = self.dm_total/self.day_diff
+        
+
         self.silage_dm = silage_dm
         self.grass_dm = grass_dm
         self.slobber_dm = slobber_dm
@@ -111,6 +115,15 @@ class FeedProcessor:
         self.tdn_silage = silage_dm * tdn_table['silage']
         self.tdn_rumput = grass_dm * tdn_table['grass']
         self.tdn_slobber = slobber_dm * tdn_table['slobber']
+
+        self.pk_silage = silage_dm *pk_table['silage']
+        self.pk_rumput = grass_dm * pk_table['grass']
+        self.pk_slobber = slobber_dm *pk_table['slobber']
+
+        self.pk_total = self.pk_silage + self.pk_rumput + self.pk_slobber
+
+        self.pk_per = self.pk_total / self.dm_total
+
         self.total_tdn = self.tdn_slobber + self.tdn_silage + self.tdn_rumput
        
         self.per_slobber_tdn = self.tdn_slobber/self.total_tdn 
@@ -159,6 +172,10 @@ class FeedProcessor:
         self.tdn_silage_over_mw = (self.tdn_silage / self.avg_mw)
         self.tdn_rumput_over_mw = (self.tdn_rumput / self.avg_mw) 
         self.tdn_slobber_over_mw = (self.tdn_slobber / self.avg_mw) 
+
+        self.tdn_silage_dt = (self.tdn_silage ) / self.day_diff
+        self.tdn_rumput_dt = (self.tdn_rumput ) / self.day_diff
+        self.tdn_slobber_dt = (self.tdn_slobber ) / self.day_diff
         
 
         self.total_tdn_2_dt_dmi = (
@@ -250,6 +267,13 @@ class FeedProcessor:
             'tdn_rumput': self.tdn_rumput,
             'tdn_slobber': self.tdn_slobber,
             'total_tdn': self.total_tdn,
+            'total_tdn_2': self.total_tdn**2,
+            'total_tdn_3': self.total_tdn**3,
+            'pk_silage': self.pk_silage,
+            'pk_rumput': self.pk_rumput,
+            'pk_slobber': self.pk_slobber,
+            'total_pk': self.pk_total,
+            'per_pk': self.pk_per,
             'FeedRatio': self.feed_ratio,
             'per_slobber_dm': self.per_slobber_dm,
             'per_slobber_tdn': self.per_slobber_tdn,
@@ -261,6 +285,7 @@ class FeedProcessor:
             'slobber_cost': self.slobber_cost,
             'feed_cost': self.feed_cost,
             'feed_cost_per_dm': self.feed_cost_per_dm,
+            'total_tdn': self.total_tdn,
             'total_tdn_dt': self.total_tdn_dt,
             'total_tdn_mw_dt': self.total_tdn_mw_dt,
             'total_tdn_mw': self.total_tdn_mw,
@@ -273,6 +298,9 @@ class FeedProcessor:
             'tdn_silage_over_mw_dt': self.tdn_silage_over_mw_dt,
             'tdn_rumput_over_mw_dt': self.tdn_rumput_over_mw_dt,
             'tdn_slobber_over_mw_dt': self.tdn_slobber_over_mw_dt,
+            'tdn_silage_dt': self.tdn_silage_dt,
+            'tdn_rumput_dt': self.tdn_rumput_dt,
+            'tdn_slobber_dt': self.tdn_slobber_dt,
             'tdn_silage_over_mw': self.tdn_silage_over_mw,
             'tdn_rumput_over_mw': self.tdn_rumput_over_mw,
             'silage_rumput_mw': self.tdn_silage_over_mw*self.tdn_rumput_over_mw,
@@ -290,6 +318,8 @@ class FeedProcessor:
             'slobber_dm_squared': self.slobber_dm_squared,
             'green_dm_squared': self.green_dm_squared,
             'total_tdn_squared': self.total_tdn_squared,
+            'total_tdn_squared_ddmi': self.total_tdn_squared/self.dm_total,
+            'total_tdn_3_ddmi': (self.total_tdn**3)/self.dm_total,
             'FeedRatio_squared': self.feed_ratio_squared,
             'per_slobber_dm_squared': self.per_slobber_dm_squared,
             'per_green_dm_squared': self.per_green_dm_squared,
@@ -307,6 +337,14 @@ class FeedProcessor:
            
             # dmi features
             'per_slobber_dm_dmi':self.per_slobber_dm_dmi,
+            'tdn_silage_over_mw_dt_ddmi': self.tdn_silage_over_mw_dt/self.dm_total_dt,
+            'tdn_rumput_over_mw_dt_ddmi': self.tdn_rumput_over_mw_dt/self.dm_total_dt,
+            'tdn_slobber_over_mw_dt_ddmi': self.tdn_slobber_over_mw_dt/self.dm_total_dt,
+            'tdn_silage_ddmi': (self.tdn_silage/self.dm_total),
+            'tdn_rumput_ddmi': self.tdn_rumput/self.dm_total,
+            'tdn_slobber_ddmi': self.tdn_slobber/self.dm_total,
+            'total_tdn_2_ddmi': (self.total_tdn**2)/self.dm_total,
+            'total_dmi': self.dm_total,
 
             # Log features
             'silage_dm_log': self.silage_dm_log,

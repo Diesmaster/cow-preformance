@@ -5,6 +5,12 @@ tdn_table = {
     "grass": 0.5087
 }
 
+pk_table = {
+    "slobber": 0.2913,
+    "silage": 0.08,
+    "grass": 0.05
+} 
+
 costs_per_dm = {
     "slobber":4082.87,
     "silage":2500,

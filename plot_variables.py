@@ -118,7 +118,7 @@ def main():
     dependent_vars = ['pred_adgLatest_average']  # <-- CHANGE THIS
     
     # List of independent variables (x-axis)
-    independent_vars = ['tdn_slobber_over_mw_dt', 'tdn_rumput_over_mw_dt', 'tdn_silage_over_mw_dt']  # <-- CHANGE THIS
+    independent_vars = ['per_pk']  # <-- CHANGE THIS
     
     # ============================================================
     

@@ -1,0 +1,59 @@
+{
+  "title": "Limousin_limousine_book_fcr_1",
+  "n": 1,
+  "group_col": "cow_id",
+  "time_col": "pred_date",
+  "entity_effects": true,
+  "time_effects": false,
+  "independent_variables": [
+    "metabolic_weight",
+    "tdn_silage_ddmi",
+    "tdn_rumput_ddmi",
+    "tdn_slobber_ddmi",
+    "day_diff_2"
+  ],
+  "dependent_variable": "pred_fcrLatest_average",
+  "summary": {
+    "r2": 0.5600304031351685,
+    "r2_within": 0.5600304031351684,
+    "r2_between": -3.0983437479239795,
+    "r2_overall": -0.3806658246600454,
+    "f_statistic": 70.00863785116778,
+    "f_pvalue": 1.1102230246251565e-16,
+    "n_entities": 16,
+    "n_obs": 240,
+    "mean_fixed_effect": 8.949965860894515
+  },
+  "coefficients": {
+    "metabolic_weight": -0.19463487203547014,
+    "tdn_silage_ddmi": 51.560221578328196,
+    "tdn_rumput_ddmi": 78.25066095490486,
+    "tdn_slobber_ddmi": 41.267600671061786,
+    "day_diff_2": -0.01857888481916133
+  },
+  "std_errors": {
+    "metabolic_weight": 0.043732951480030126,
+    "tdn_silage_ddmi": 5.963827679951143,
+    "tdn_rumput_ddmi": 11.224788849829404,
+    "tdn_slobber_ddmi": 6.884729624040848,
+    "day_diff_2": 0.002733379709189561
+  },
+  "pvalues": {
+    "metabolic_weight": 1.3610325953372637e-05,
+    "tdn_silage_ddmi": 1.1102230246251565e-15,
+    "tdn_rumput_ddmi": 3.615707733217732e-11,
+    "tdn_slobber_ddmi": 8.292321274083747e-09,
+    "day_diff_2": 9.892642260922457e-11
+  },
+  "diagnostics": {
+    "residual_normality": {
+      "anderson_darling_stat": 4.405148162741597,
+      "pvalue": 5.793861579125586e-11
+    },
+    "durbin_watson": 1.3666015739580315,
+    "n_entities": 16,
+    "n_obs": 240,
+    "mean_fixed_effect": 8.949965860894515
+  },
+  "cross_validation": null
+}

@@ -1,0 +1,59 @@
+{
+  "title": "Limousin_limousine_book_wg_1",
+  "n": 1,
+  "group_col": "cow_id",
+  "time_col": "pred_date",
+  "entity_effects": true,
+  "time_effects": false,
+  "independent_variables": [
+    "mw_dmi",
+    "tdn_silage",
+    "tdn_rumput",
+    "tdn_slobber",
+    "day_diff_2_dmi"
+  ],
+  "dependent_variable": "pred_weight_gain",
+  "summary": {
+    "r2": 0.4506026359829236,
+    "r2_within": 0.4506026359829236,
+    "r2_between": 0.8613334927019903,
+    "r2_overall": 0.8572030529316921,
+    "f_statistic": 35.92371705561844,
+    "f_pvalue": 1.1102230246251565e-16,
+    "n_entities": 16,
+    "n_obs": 240,
+    "mean_fixed_effect": 10.213750301284232
+  },
+  "coefficients": {
+    "mw_dmi": -0.0017065981870025113,
+    "tdn_silage": 0.48172121262146106,
+    "tdn_rumput": 0.6618247483857941,
+    "tdn_slobber": 0.3859741965221541,
+    "day_diff_2_dmi": -0.0002379225753096786
+  },
+  "std_errors": {
+    "mw_dmi": 0.00044967486842090003,
+    "tdn_silage": 0.13795964217064066,
+    "tdn_rumput": 0.19000396026401675,
+    "tdn_slobber": 0.11517559465721909,
+    "day_diff_2_dmi": 8.341433946862275e-05
+  },
+  "pvalues": {
+    "mw_dmi": 0.00019096980203547886,
+    "tdn_silage": 0.0005803051309232199,
+    "tdn_rumput": 0.0005981205586191862,
+    "tdn_slobber": 0.0009476931143375111,
+    "day_diff_2_dmi": 0.004755970563433243
+  },
+  "diagnostics": {
+    "residual_normality": {
+      "anderson_darling_stat": 2.2401865853276206,
+      "pvalue": 1.0734404563180991e-05
+    },
+    "durbin_watson": 1.2522825610013328,
+    "n_entities": 16,
+    "n_obs": 240,
+    "mean_fixed_effect": 10.213750301284232
+  },
+  "cross_validation": null
+}
