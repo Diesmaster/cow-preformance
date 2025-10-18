@@ -1,0 +1,63 @@
+{
+  "title": "Panel_Kal_limousine_book_fcr_1_final",
+  "n": 1,
+  "group_col": "cow_id",
+  "time_col": "pred_date",
+  "entity_effects": true,
+  "time_effects": false,
+  "independent_variables": [
+    "hasBEF",
+    "mw_ratio",
+    "tdn_silage_ddmi",
+    "tdn_rumput_ddmi",
+    "tdn_slobber_ddmi",
+    "day_diff_2"
+  ],
+  "dependent_variable": "pred_fcrLatest_average",
+  "summary": {
+    "r2": 0.38596251584401686,
+    "r2_within": 0.38596251584401675,
+    "r2_between": -4.361743669918878,
+    "r2_overall": -0.22058429345003905,
+    "f_statistic": 34.8225050253232,
+    "f_pvalue": 1.1102230246251565e-16,
+    "n_entities": 19,
+    "n_obs": 301,
+    "mean_fixed_effect": 7.8729902468515505
+  },
+  "coefficients": {
+    "hasBEF": -2.975307328169252,
+    "mw_ratio": -0.06730175318324662,
+    "tdn_silage_ddmi": 34.54586476356914,
+    "tdn_rumput_ddmi": 59.88882385071726,
+    "tdn_slobber_ddmi": 24.460371629708934,
+    "day_diff_2": -0.013707886920839117
+  },
+  "std_errors": {
+    "hasBEF": 1.398383941147184,
+    "mw_ratio": 0.009977307855676338,
+    "tdn_silage_ddmi": 3.0850999394614367,
+    "tdn_rumput_ddmi": 6.589600236670218,
+    "tdn_slobber_ddmi": 2.4476926010276876,
+    "day_diff_2": 0.0027049436151911246
+  },
+  "pvalues": {
+    "hasBEF": 0.03424716312399756,
+    "mw_ratio": 8.87865336807181e-11,
+    "tdn_silage_ddmi": 0.0,
+    "tdn_rumput_ddmi": 0.0,
+    "tdn_slobber_ddmi": 0.0,
+    "day_diff_2": 7.369234358289845e-07
+  },
+  "diagnostics": {
+    "residual_normality": {
+      "anderson_darling_stat": 25.016730938150943,
+      "pvalue": 0.0
+    },
+    "durbin_watson": 2.0556421080439864,
+    "n_entities": 19,
+    "n_obs": 301,
+    "mean_fixed_effect": 7.8729902468515505
+  },
+  "cross_validation": null
+}
