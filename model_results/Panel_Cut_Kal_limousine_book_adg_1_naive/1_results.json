@@ -1,0 +1,59 @@
+{
+  "title": "Panel_Cut_Kal_limousine_book_adg_1_naive",
+  "n": 1,
+  "group_col": "cow_id",
+  "time_col": "pred_date",
+  "entity_effects": true,
+  "time_effects": false,
+  "independent_variables": [
+    "weight",
+    "total_dmi",
+    "total_dmi_log",
+    "FeedRatio",
+    "day_diff"
+  ],
+  "dependent_variable": "pred_adgLatest_average",
+  "summary": {
+    "r2": 0.5246244369887538,
+    "r2_within": 0.5246244369887538,
+    "r2_between": -34.79165720169194,
+    "r2_overall": -27.831674808293084,
+    "f_statistic": 46.35119696509597,
+    "f_pvalue": 1.1102230246251565e-16,
+    "n_entities": 16,
+    "n_obs": 231,
+    "mean_fixed_effect": 0.9353924210390544
+  },
+  "coefficients": {
+    "weight": -0.0031668984374990357,
+    "total_dmi": -0.009393973868818113,
+    "total_dmi_log": 2.263211994355018,
+    "FeedRatio": 0.5498335730427469,
+    "day_diff": -0.13822911063341992
+  },
+  "std_errors": {
+    "weight": 0.0009133518831375737,
+    "total_dmi": 0.003811948064185178,
+    "total_dmi_log": 0.671042956996998,
+    "FeedRatio": 0.24703924521230589,
+    "day_diff": 0.030139089857753792
+  },
+  "pvalues": {
+    "weight": 0.0006374839400813404,
+    "total_dmi": 0.014529341762260506,
+    "total_dmi_log": 0.0008862256099437804,
+    "FeedRatio": 0.027097856112411334,
+    "day_diff": 7.746264510499756e-06
+  },
+  "diagnostics": {
+    "residual_normality": {
+      "anderson_darling_stat": 1.072261098838851,
+      "pvalue": 0.008014958094308024
+    },
+    "durbin_watson": 0.6389237783459571,
+    "n_entities": 16,
+    "n_obs": 231,
+    "mean_fixed_effect": 0.9353924210390544
+  },
+  "cross_validation": null
+}

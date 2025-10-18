@@ -262,6 +262,8 @@ Examples:
     # Iterate through each model configuration
     for model_name, model_config in model_configs.items():
 
+        ori_model_name = model_name
+
         if args.kalman == True:
             model_name = 'Kal_' + model_name 
 
@@ -292,7 +294,7 @@ Examples:
             print(f"{'='*80}\n")
             
             # Filter by breed if needed
-            df_filtered, breed_prefix = filter_breed(df, model_name)
+            df_filtered, breed_prefix = filter_breed(df, ori_model_name)
            
             breed_prefix = ''
 

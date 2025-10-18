@@ -1,5 +1,10 @@
 models = {
-    'limousine_book_adg_1_final':
+     'limousine_book_adg_1_naive':
+        {
+            'pass':False,
+            'depended_attr': 'pred_adgLatest_average', 
+            'indpended_attr':   [ 'weight', 'total_dmi', 'total_dmi_log', 'FeedRatio', 'day_diff']
+        },   'limousine_book_adg_1_final':
         {
             'pass':False,
             'depended_attr': 'pred_adgLatest_average', 
@@ -7,13 +12,13 @@ models = {
         },
     'limousine_book_fcr_1_final':
         {
-            'pass':False,
+            'pass':True,
             'depended_attr': 'pred_fcrLatest_average', 
             'indpended_attr':   [ 'hasBEF', 'mw_ratio', 'tdn_silage_ddmi', 'tdn_rumput_ddmi', 'tdn_slobber_ddmi', 'day_diff_2' ]
         },
     'limousine_book_wg_1_final':
         {
-            'pass':False,
+            'pass':True,
             'depended_attr': 'pred_weight_gain', 
             'indpended_attr':   [ 'hasBEF_dmi', 'mw_ratio_dmi', 'tdn_silage', 'tdn_rumput', 'tdn_slobber', 'day_diff_2_dmi']
         },

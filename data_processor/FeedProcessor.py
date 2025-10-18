@@ -356,6 +356,11 @@ class FeedProcessor:
             'tdn_slobber_ddmi': self.tdn_slobber/self.dm_total,
             'total_tdn_2_ddmi': (self.total_tdn**2)/self.dm_total,
             'total_dmi': self.dm_total,
+            'total_dmi_dt': self.dm_total/self.day_diff,
+            'total_dmi_dw': self.dm_total/self.avg_weight,
+            'total_dmi_log': np.log(self.dm_total),
+            'total_dmi_log_dt': np.log(self.dm_total/self.day_diff),
+            'total_dmi_log_dw': np.log(self.dm_total/self.avg_weight),
 
             # Log features
             'silage_dm_log': self.silage_dm_log,
