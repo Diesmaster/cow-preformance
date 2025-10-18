@@ -132,6 +132,7 @@ class DataProcessing:
                 ret_dict[cow_id]['weight_history_data'] = WeightHistoryData(weight_histories[cow_id])
                 ret_dict[cow_id]['feed_history_data'] = FeedHistoryData(feed_histories[cow_id]) if cow_id in feed_histories else None
                 ret_dict[cow_id]['medical_history_data'] = MedicalHistoryData(medical_histories[cow_id]) if cow_id in medical_histories else None
+                print(ret_dict[cow_id]['medical_history_data']) 
         return ret_dict
 
     def get_data(self):
@@ -260,6 +261,7 @@ class DataProcessing:
         ret_dict['day_diff'] = (datetime.strptime(ret_dict['pred_date'], "%Y-%m-%d") - 
                                datetime.strptime(ret_dict['date'], "%Y-%m-%d")).days
         ret_dict['day_diff_2'] = ret_dict['day_diff']**2
+        ret_dict['day_diff_2_dmi'] = (ret_dict['day_diff']**2)*ret_dict['total_dmi']
         ret_dict['day_diff_recp'] = ret_dict['day_diff']**2
       
         ret_dict['theoritical_error_adg'] = 20/ret_dict['day_diff']
@@ -421,6 +423,9 @@ class DataProcessing:
         ret_dict['gotDewormed_dt'] = int(ret_dict['gotDewormed'])/ret_dict['day_diff']
         ret_dict['DaysSinceDewormed_dt'] = int(ret_dict['DaysSinceDewormed'])/ret_dict['day_diff']
 
+        if ret_dict['pred_adgLatest_average'] <= 0:
+            #print(ret_dict)
+            print(f"cow_id: {ret_dict['cattleId']}, adg: {ret_dict['pred_adgLatest_average']}, from: {ret_dict['date']}, until: {ret_dict['pred_date']}")
 
         return ret_dict
 

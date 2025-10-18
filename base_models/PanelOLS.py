@@ -24,6 +24,7 @@ class PanelOLSModel(BaseModel):
 
     def __init__(self, independent_attrs, dependent_attr, n, title, group_col: str = "cow_id", 
                  time_col: str = "pred_date", entity_effects: bool = True, time_effects: bool = False):
+        title = f"Panel_{title}"
         super().__init__(independent_attrs, dependent_attr, n, title)
         self.group_col = group_col
         self.time_col = time_col
@@ -321,7 +322,7 @@ class PanelOLSModel(BaseModel):
         if self.results is None:
             raise ValueError("Model must be fitted before saving results")
 
-        results_dir = os.path.join("model_results", f"PanelOLS_{self.title}")
+        results_dir = os.path.join("model_results", f"{self.title}")
         os.makedirs(results_dir, exist_ok=True)
 
         payload = {
@@ -395,7 +396,7 @@ class PanelOLSModel(BaseModel):
         plt.tight_layout()
 
         if save:
-            results_dir = os.path.join("model_results", f"PanelOLS_{self.title}")
+            results_dir = os.path.join("model_results", f"{self.title}")
             os.makedirs(results_dir, exist_ok=True)
             path = os.path.join(results_dir, f"{self.n}_plot.png")
             plt.savefig(path, dpi=300)

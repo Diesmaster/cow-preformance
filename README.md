@@ -48,3 +48,23 @@ Negr = Neg^2/3
 
 sinds average pref on the cow farm is 1 adg -> negr = neg per day
 
+would require some sort of hidden state model.
+
+for now Negr is approx 1, -> more advanced methods need more data.
+
+
+## TODO:
+
+explain the breed split.
+explain all the finding with the ratio, and the dmi/dt etc. processes/
+explain different values for Negr that failed etc.
+make all the in between models so it can easily be checked
+make 3 data processing options -> raw, kalhman filter, kahlman filter + tail removal.
+
+
+
+Try to come up with a generalized from of wg over long periods.
+
+show difference between OLS and Panel
+
+Conculsions

@@ -5,7 +5,7 @@ from base_models.OLSModel import OLSModel
 from base_models.FixedEffectsModel import FixedEffectsModel 
 from base_models.PanelOLS import PanelOLSModel 
 from base_models.SIMEXModel import SIMEXModel 
-from models.models import models
+from models.models import models, OLS_models
 
 from utils.filter_utils import filter_few_datapoints
 
@@ -13,23 +13,8 @@ def run_model(df, independent_attr, dependent_attr, n, prefix, model_name):
     
     model_name = f'{prefix}_{model_name}'
 
-    ols_model = PanelOLSModel(independent_attr, dependent_attr, n, model_name)
+    ols_model = OLSModel(independent_attr, dependent_attr, n, model_name)
 
-    # Print the kicked out data points before filtering
-    kicked_out = df[df['pred_adgLatest_average'] < 0]
-    if len(kicked_out) > 0:
-        print(f"\n⚠️ Removing {len(kicked_out)} data points with negative pred_adgLatest_average:")
-        print("=" * 60)
-        for idx, row in kicked_out.iterrows():
-            cow_id = row.get('cow_id', row.get('cattleId', 'Unknown'))
-            date = row.get('pred_date', row.get('date', 'Unknown'))
-            value = row['pred_adgLatest_average']
-            print(f"  Cow: {cow_id:20s} | Date: {str(date):20s} | Value: {value:.4f}")
-        print("=" * 60)
-    else:
-        print("✅ No negative pred_adgLatest_average values found.")
-
-    df = df[df['pred_adgLatest_average'] >= 0]
     try:
         ols_model.fit(df)
         
@@ -56,7 +41,7 @@ def main():
     dfs = processor.get_dfs(n_weigings)
     
     # Iterate through each model configuration
-    for model_name, model_config in models.items():
+    for model_name, model_config in OLS_models.items():
         if 'pass' in model_config:
             if model_config['pass'] == True:
                 continue
@@ -83,9 +68,7 @@ def main():
               
                 df_limousin = df[df['breed'].isin(['Limousin' ])].copy()
 
-                assumed_absolute_error = 20/30 
-                err_sd = assumed_absolute_error / np.sqrt(3)
-                # Create and fit the OLS model with cross-validation
+                   # Create and fit the OLS model with cross-validation
                 run_model(df_limousin, independent_attr, dependent_attr, n, 'Limousin', model_name)
 
             

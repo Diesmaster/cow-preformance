@@ -213,4 +213,16 @@ class Models:
 
         return farm_model
 
+    medical_history_entry_model = {
+        'docId': (str, NoneType),
+        'date': str,
+        'agenda': str,
+        'treatment': str,
+        'totalCost': (int, float),
+        'medicinesUsed': dict,
+        'scheduled': bool
+    }
 
+    medical_history_model = {
+        'data': list,
+    }

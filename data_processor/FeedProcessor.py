@@ -158,6 +158,8 @@ class FeedProcessor:
         self.tdn_rumput_dt = self.tdn_rumput / self.day_diff
         self.tdn_slobber_dt = self.tdn_slobber / self.day_diff
 
+
+
         
         self.total_tdn_greens = self.tdn_silage + self.tdn_rumput
 
@@ -301,6 +303,9 @@ class FeedProcessor:
             'tdn_silage_dt': self.tdn_silage_dt,
             'tdn_rumput_dt': self.tdn_rumput_dt,
             'tdn_slobber_dt': self.tdn_slobber_dt,
+            'tdn_silage_dt_2': self.tdn_silage_dt**2,
+            'tdn_rumput_dt_2': self.tdn_rumput_dt**2,
+            'tdn_slobber_dt_2': self.tdn_slobber_dt**2,
             'tdn_silage_over_mw': self.tdn_silage_over_mw,
             'tdn_rumput_over_mw': self.tdn_rumput_over_mw,
             'silage_rumput_mw': self.tdn_silage_over_mw*self.tdn_rumput_over_mw,
@@ -328,6 +333,12 @@ class FeedProcessor:
             'tdn_silage_over_mw_dt_2': self.tdn_silage_over_mw_dt**2,
             'tdn_rumput_over_mw_dt_2': self.tdn_rumput_over_mw_dt**2,
             'tdn_slobber_over_mw_dt_2': self.tdn_slobber_over_mw_dt**2,
+            'tdn_silage_dt_2_3': self.tdn_silage_dt/((self.total_tdn)**2/3),
+            'tdn_rumput_dt_2_3': self.tdn_rumput_dt/((self.total_tdn)**2/3),
+            'tdn_slobber_dt_2_3': self.tdn_slobber_dt/((self.total_tdn)**2/3),
+            'tdn_silage_dt_r_dmi': self.tdn_silage_dt/((self.dm_total)**1/2),
+            'tdn_rumput_dt_r_dmi': self.tdn_rumput_dt/((self.dm_total)**1/2),
+            'tdn_slobber_dt_r_dmi': self.tdn_slobber_dt/((self.dm_total)**1/2),
             'total_tdn_dt_2': self.total_tdn_dt_squared,
             'total_tdn_dt_3': self.total_tdn_dt**3,
             'total_tdn_mw_dt_3': self.total_tdn_3_dt,

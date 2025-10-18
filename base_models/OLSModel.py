@@ -38,7 +38,7 @@ class OLSModel(BaseModel):
 
         self.dependent_attr = dependent_attr
         self.n = n
-        self.title = title
+        self.title = f"OLS_{title}"
         self.model = None
         self.results = None
         self.formula = None
@@ -49,7 +49,7 @@ class OLSModel(BaseModel):
         """Build the regression formula with cow fixed effects."""
         # Add categorical term for cow_id
         fixed_effects_term = "C(cow_id)"
-        self.formula = f"{self.dependent_attr} ~ {' + '.join(self.independent_attrs)} + {fixed_effects_term}"
+        self.formula = f"{self.dependent_attr} ~ {' + '.join(self.independent_attrs)}"
         return self.formula
 
     def fit(self, df):
