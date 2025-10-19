@@ -97,12 +97,6 @@ def filter_breed(df, model_name):
         df_filtered = df[df['breed'].isin(['Limousin'])].copy()
         breed_name = 'Limousin'
         
-        # Debug info for Limousin
-        if 'hasBEF' in df_filtered.columns:
-            bef_entries = df_filtered[df_filtered['hasBEF'] == True]
-            if not bef_entries.empty:
-                print("\nEntries with hasBEF = True:\n")
-                print(bef_entries[['date', 'cow_id', 'pred_adgLatest_average']].to_string(index=False))
     else:
         df_filtered = df.copy()
         breed_name = ''
@@ -274,7 +268,7 @@ Examples:
             model_name = 'Raw_' + model_name
 
         # Skip if model is marked to pass
-        if model_config.get('pass', False):
+        if model_config.get('pass', False) and args.model_name == None:
             print(f"\nSkipping model '{model_name}' (marked as pass)")
             continue
         

@@ -225,6 +225,11 @@ class FeedProcessor:
         self.tdn_silage_log = np.log(self.tdn_silage) if self.tdn_silage > 0 else np.nan
         self.tdn_rumput_log = np.log(self.tdn_rumput) if self.tdn_rumput > 0 else np.nan
         self.tdn_slobber_log = np.log(self.tdn_slobber) if self.tdn_slobber > 0 else np.nan
+        self.tdn_silage_dt_log = np.log(self.tdn_silage_dt) if self.tdn_silage > 0 else 0 
+        self.tdn_rumput_dt_log = np.log(self.tdn_rumput_dt) if self.tdn_rumput > 0 else 0 
+        self.tdn_slobber_dt_log = np.log(self.tdn_slobber_dt) if self.tdn_slobber > 0 else 0  
+    
+
     
     def get_dmi_features(self):
         """
@@ -269,6 +274,7 @@ class FeedProcessor:
             'tdn_rumput': self.tdn_rumput,
             'tdn_slobber': self.tdn_slobber,
             'total_tdn': self.total_tdn,
+            '1_total_tdn': 1/self.total_tdn,
             'total_tdn_2': self.total_tdn**2,
             'total_tdn_3': self.total_tdn**3,
             'pk_silage': self.pk_silage,
@@ -289,12 +295,16 @@ class FeedProcessor:
             'feed_cost_per_dm': self.feed_cost_per_dm,
             'total_tdn': self.total_tdn,
             'total_tdn_dt': self.total_tdn_dt,
+            'total_tdn_dt_log': np.log(self.total_tdn_dt),
             'total_tdn_mw_dt': self.total_tdn_mw_dt,
             'total_tdn_mw': self.total_tdn_mw,
             'tdn_silage_dt': self.tdn_silage_dt,
+            'tdn_silage_dt_log': self.tdn_silage_dt_log,
             'tdn_rumput_dt': self.tdn_rumput_dt,
+            'tdn_rumput_dt_log': self.tdn_rumput_dt_log,
             'silage_x_rumput_tdn': self.tdn_rumput_over_mw_dt*self.tdn_slobber_over_mw_dt,
             'tdn_slobber_dt': self.tdn_slobber_dt,
+            'tdn_slobber_dt_log': self.tdn_slobber_dt_log,
             'total_tdn_greens_over_mw': self.total_tdn_greens_over_mw,
             'total_tdn_greens_over_mw_dt': self.total_tdn_greens_over_mw_dt,
             'tdn_silage_over_mw_dt': self.tdn_silage_over_mw_dt,
@@ -356,9 +366,15 @@ class FeedProcessor:
             'tdn_slobber_ddmi': self.tdn_slobber/self.dm_total,
             'total_tdn_2_ddmi': (self.total_tdn**2)/self.dm_total,
             'total_dmi': self.dm_total,
+            'weight_ddmi': self.avg_weight/self.dm_total,
+            'day_diff_ddmi': (self.day_diff)/self.dm_total,
+            'day_diff_2_ddmi': (self.day_diff**2)/self.dm_total,
+            'total_dmi_2': self.dm_total**2,
+            '1_total_dmi': 1/self.dm_total,
             'total_dmi_dt': self.dm_total/self.day_diff,
             'total_dmi_dw': self.dm_total/self.avg_weight,
             'total_dmi_log': np.log(self.dm_total),
+            'total_dmi_log_dmi': np.log(self.dm_total)*self.dm_total,
             'total_dmi_log_dt': np.log(self.dm_total/self.day_diff),
             'total_dmi_log_dw': np.log(self.dm_total/self.avg_weight),
 

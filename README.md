@@ -233,10 +233,35 @@ Medical history was incorrectly recorded, so data about that is unreliable.
 Cow with ID: rexFmUY8QHCvB0TsjnbB had major issues so is left out of the analysis.
 
 ## NOTES:
-Neg required = a * weight + adg^2
-Neg required (Negr) = a * weight + (Neg/Negr)^2
-Neg required (Negr) = a * weight + Neg^2/Negr^2
-Neg required (Negr) = a * weight + Neg^2/Negr^2
+Energy (Mcal/d) = a × W^0.75 + b × W^0.75 × ADG^c
+b × W^0.75 × ADG^c = -a × W^0.75 + Energy (Mcal/d)
+ADG^c = -a  + (1/b)*(Energy (Mcal/d)/W^0.75)
+ADG =  (-a  + (1/b)*(Energy (Mcal/d)/W^0.75))^1/c
+total Energy required (Mcal/d) = a × W^0.75 + b × W^0.75 × (adg)^c
+NEg = Total Energy - NEm
+NEm = a × W^0.75
+total NEg required at adg* (Mcal/d) =  b × W^0.75 × (NEg/Negr)^c
+NEgr =  b × W^0.75 × (NEg/Negr)^c
+NEgr =  b × W^0.75 × NEg^c / Negr^c
+1 =  b × W^0.75 × NEg^c / Negr^c-1
+Negr^c-1 =  b × W^0.75 × NEg^c
+Negr^-1 =  b × (W^0.75)^1/c × NEg
+
+
+Possible id log normal:
+In a linear form for statistical modeling, we can take the natural logarithm:
+ln(Ereq) = (1/c) × ln(b) + (0.75/c) × ln(W) + [(c-1)/c] × ln(NEg)
+This gives us:
+ln(Ereq) = β₀ + β₁ × ln(W) + β₂ × ln(NEg)
+Where:
+
+β₀ = (1/c) × ln(b)
+β₁ = 0.75/c
+β₂ = (c-1)/c
+
+Neg required (Negr) = a * weight + (Neg/Negr)^c
+Neg required (Negr) = a * weight + Neg^2/Negr^c
+Neg required (Negr) = a * weight + Neg^2/Negr^c
 
 0 = a * weight + Neg^2/Negr^2 - Negr 
 

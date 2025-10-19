@@ -50,7 +50,9 @@ class KalmanSmoother:
                target_attr: str,
                group_attr: str = None,
                time_attr: str = None,
-               inplace: bool = False) -> pd.DataFrame:
+               inplace: bool = False,
+               print_results: bool = True
+               ) -> pd.DataFrame:
         """
         Apply Kalman filtering/smoothing to remove measurement noise.
         
@@ -143,9 +145,66 @@ class KalmanSmoother:
         # Print summary
         n_smoothed = df_result[smoothed_col].notna().sum()
         print(f"\nSuccessfully smoothed {n_smoothed}/{len(df_result)} observations")
-        
+       
+        if print_results == True:
+            self.print_summary() #df_result, smoothed_col, target_attr
+
         return df_result
-    
+
+    def print_summary(self):
+        """Print summary of fitted models across all entities."""
+        if not self.fitted_:
+            raise ValueError("Model not fitted. Run filter() first.")
+        
+        if not self.entity_results:
+            print("No entity results stored.")
+            return
+        
+        print("\n" + "=" * 70)
+        print("Kalman Smoother Summary")
+        print("=" * 70)
+        print(f"Number of entities processed: {len(self.entity_results)}")
+        
+        # Collect statistics, handling zeros and NaNs
+        obs_vars = [r['sigma2_obs'] for r in self.entity_results.values() if not np.isnan(r['sigma2_obs'])]
+        state_vars = [r['sigma2_state'] for r in self.entity_results.values() if not np.isnan(r['sigma2_state'])]
+        aics = [r['aic'] for r in self.entity_results.values() if not np.isnan(r['aic'])]
+        
+        # Filter out zeros from obs_vars to avoid division by zero
+        clean_obs_vars = [v for v in obs_vars if v > 1e-6]
+        clean_state_vars = [s for s, o in zip(state_vars, obs_vars) if o > 1e-6]
+        
+        print(f"\nMeasurement noise variance (σ²_obs):")
+        print(f"  Mean: {np.mean(obs_vars):.4f}")
+        print(f"  Std:  {np.std(obs_vars):.4f}")
+        print(f"  Min:  {np.min(obs_vars):.4f}")
+        print(f"  Max:  {np.max(obs_vars):.4f}")
+        
+        print(f"\nProcess noise variance (σ²_state):")
+        print(f"  Mean: {np.mean(state_vars):.4f}")
+        print(f"  Std:  {np.std(state_vars):.4f}")
+        print(f"  Min:  {np.min(state_vars):.4f}")
+        print(f"  Max:  {np.max(state_vars):.4f}")
+        
+        print(f"\nSignal-to-noise ratio (σ²_state / σ²_obs):")
+        if clean_obs_vars:  # Only calculate if we have valid values
+            snr = [s/o for s, o in zip(clean_state_vars, clean_obs_vars)]
+            # Use median instead of mean for SNR to avoid outliers
+            median_snr = np.median(snr)
+            print(f"  Median: {median_snr:.4f}")
+            # Provide a more robust range
+            print(f"  25th percentile: {np.percentile(snr, 25):.4f}")
+            print(f"  75th percentile: {np.percentile(snr, 75):.4f}")
+        else:
+            print("  Could not calculate (zero or undefined observation variance)")
+        print(f"  (Higher = more true variation vs noise)")
+        
+        print(f"\nModel fit (AIC):")
+        print(f"  Mean: {np.mean(aics):.2f}")
+        print(f"  Min:  {np.min(aics):.2f}")
+        print(f"  Max:  {np.max(aics):.2f}")
+        print("=" * 70)
+
     def _fit_entity(self, observations, entity_id=None):
         """
         Fit Kalman filter/smoother for a single entity.
@@ -311,48 +370,7 @@ class KalmanSmoother:
         
         return self.entity_results[entity_id]
     
-    def print_summary(self):
-        """Print summary of fitted models across all entities."""
-        if not self.fitted_:
-            raise ValueError("Model not fitted. Run filter() first.")
-        
-        if not self.entity_results:
-            print("No entity results stored.")
-            return
-        
-        print("\n" + "=" * 70)
-        print("Kalman Smoother Summary")
-        print("=" * 70)
-        print(f"Number of entities processed: {len(self.entity_results)}")
-        
-        # Collect statistics
-        obs_vars = [r['sigma2_obs'] for r in self.entity_results.values()]
-        state_vars = [r['sigma2_state'] for r in self.entity_results.values()]
-        aics = [r['aic'] for r in self.entity_results.values()]
-        
-        print(f"\nMeasurement noise variance (σ²_obs):")
-        print(f"  Mean: {np.mean(obs_vars):.4f}")
-        print(f"  Std:  {np.std(obs_vars):.4f}")
-        print(f"  Min:  {np.min(obs_vars):.4f}")
-        print(f"  Max:  {np.max(obs_vars):.4f}")
-        
-        print(f"\nProcess noise variance (σ²_state):")
-        print(f"  Mean: {np.mean(state_vars):.4f}")
-        print(f"  Std:  {np.std(state_vars):.4f}")
-        print(f"  Min:  {np.min(state_vars):.4f}")
-        print(f"  Max:  {np.max(state_vars):.4f}")
-        
-        print(f"\nSignal-to-noise ratio (σ²_state / σ²_obs):")
-        snr = [s/o for s, o in zip(state_vars, obs_vars)]
-        print(f"  Mean: {np.mean(snr):.4f}")
-        print(f"  (Higher = more true variation vs noise)")
-        
-        print(f"\nModel fit (AIC):")
-        print(f"  Mean: {np.mean(aics):.2f}")
-        print(f"  Min:  {np.min(aics):.2f}")
-        print(f"  Max:  {np.max(aics):.2f}")
-        print("=" * 70)
-    
+   
     def plot_entity(self, df, entity_id, target_attr, group_attr, time_attr=None, 
                    save=False, save_path=None):
         """

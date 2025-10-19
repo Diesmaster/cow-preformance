@@ -62,7 +62,7 @@ class PanelOLSModel(BaseModel):
         # Separate dependent and independent variables
         y = df_panel[self.dependent_attr]
         X = df_panel[self.independent_attrs]
-        
+
         # Fit the model
         self.model = PanelOLS(y, X, entity_effects=self.entity_effects, time_effects=self.time_effects)
         self.results = self.model.fit(cov_type='clustered', cluster_entity=True)

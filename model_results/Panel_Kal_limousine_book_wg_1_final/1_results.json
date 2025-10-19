@@ -15,49 +15,49 @@
   ],
   "dependent_variable": "pred_weight_gain",
   "summary": {
-    "r2": 0.4020353508085889,
-    "r2_within": 0.4020353508085889,
-    "r2_between": 0.6832315915636767,
-    "r2_overall": 0.7151300524326907,
-    "f_statistic": 30.927624504563642,
+    "r2": 0.36988591587756303,
+    "r2_within": 0.36988591587756303,
+    "r2_between": 0.6030559588082824,
+    "r2_overall": 0.664654677501022,
+    "f_statistic": 21.81736115177016,
     "f_pvalue": 1.1102230246251565e-16,
-    "n_entities": 19,
-    "n_obs": 301,
-    "mean_fixed_effect": 9.10631930600674
+    "n_entities": 16,
+    "n_obs": 245,
+    "mean_fixed_effect": 9.379544571859501
   },
   "coefficients": {
-    "hasBEF_dmi": -0.02913923425565731,
-    "mw_ratio_dmi": -0.13109560226177727,
-    "tdn_silage": 0.5553450468318339,
-    "tdn_rumput": 0.8114496096159225,
-    "tdn_slobber": 0.424896284895966,
-    "day_diff_2_dmi": -0.0002792697479940256
+    "hasBEF_dmi": -0.03325012369390008,
+    "mw_ratio_dmi": -0.1305108061693482,
+    "tdn_silage": 0.561693031908015,
+    "tdn_rumput": 0.8389955496952347,
+    "tdn_slobber": 0.4393404669847429,
+    "day_diff_2_dmi": -0.00028554632002474923
   },
   "std_errors": {
-    "hasBEF_dmi": 0.01244135713471934,
-    "mw_ratio_dmi": 0.02218615269820352,
-    "tdn_silage": 0.1013840827336387,
-    "tdn_rumput": 0.1444769524277144,
-    "tdn_slobber": 0.07998368367935586,
-    "day_diff_2_dmi": 5.294481222536619e-05
+    "hasBEF_dmi": 0.012893765511086003,
+    "mw_ratio_dmi": 0.025804419473744226,
+    "tdn_silage": 0.11263699669834243,
+    "tdn_rumput": 0.16010744629352336,
+    "tdn_slobber": 0.09410266044910777,
+    "day_diff_2_dmi": 5.989619986032021e-05
   },
   "pvalues": {
-    "hasBEF_dmi": 0.019885245858704215,
-    "mw_ratio_dmi": 1.0121062654633306e-08,
-    "tdn_silage": 9.705838532880762e-08,
-    "tdn_rumput": 4.752997795343106e-08,
-    "tdn_slobber": 2.2322275983199802e-07,
-    "day_diff_2_dmi": 2.6898319882562305e-07
+    "hasBEF_dmi": 0.01055812889618668,
+    "mw_ratio_dmi": 8.853009685338975e-07,
+    "tdn_silage": 1.2336586254768633e-06,
+    "tdn_rumput": 3.7116253137625677e-07,
+    "tdn_slobber": 5.23233834393011e-06,
+    "day_diff_2_dmi": 3.368113409063511e-06
   },
   "diagnostics": {
     "residual_normality": {
-      "anderson_darling_stat": 13.251711357471947,
-      "pvalue": 0.0
+      "anderson_darling_stat": 11.906638073198792,
+      "pvalue": 1.263270104266092e-28
     },
-    "durbin_watson": 1.886648396381749,
-    "n_entities": 19,
-    "n_obs": 301,
-    "mean_fixed_effect": 9.10631930600674
+    "durbin_watson": 1.9388607454884106,
+    "n_entities": 16,
+    "n_obs": 245,
+    "mean_fixed_effect": 9.379544571859501
   },
   "cross_validation": null
 }

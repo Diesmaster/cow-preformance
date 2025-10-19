@@ -16,7 +16,7 @@ from statsmodels.stats.stattools import durbin_watson
 from base_models.BaseModel import BaseModel
 
 
-class FixedEffectsModel(BaseModel):
+class MixedEffectsModel(BaseModel):
     """
     Linear mixed model with per-cow random intercepts (practical fixed-effects style).
     Group column defaults to 'cow_id'. Set group_col='cattleId' if your data uses that.

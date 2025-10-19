@@ -1,0 +1,47 @@
+{
+  "title": "Panel_Cut_Kal_limousine_book_fcr_1_dmi_analysis",
+  "n": 1,
+  "group_col": "cow_id",
+  "time_col": "pred_date",
+  "entity_effects": true,
+  "time_effects": false,
+  "independent_variables": [
+    "weight_ddmi",
+    "total_dmi"
+  ],
+  "dependent_variable": "pred_fcrLatest_average",
+  "summary": {
+    "r2": 0.5635051199277012,
+    "r2_within": 0.5635051199277012,
+    "r2_between": -13.43263139054827,
+    "r2_overall": -14.734640747800576,
+    "f_statistic": 137.48911616640243,
+    "f_pvalue": 1.1102230246251565e-16,
+    "n_entities": 16,
+    "n_obs": 231,
+    "mean_fixed_effect": 8.545890782365149
+  },
+  "coefficients": {
+    "weight_ddmi": -2.7208661528286977,
+    "total_dmi": -0.11796111607045022
+  },
+  "std_errors": {
+    "weight_ddmi": 0.8977038952398145,
+    "total_dmi": 0.019410300730822647
+  },
+  "pvalues": {
+    "weight_ddmi": 0.0027401896410994553,
+    "total_dmi": 5.56825674458139e-09
+  },
+  "diagnostics": {
+    "residual_normality": {
+      "anderson_darling_stat": 2.1407923679110183,
+      "pvalue": 1.8784569587553062e-05
+    },
+    "durbin_watson": 0.7726042503447046,
+    "n_entities": 16,
+    "n_obs": 231,
+    "mean_fixed_effect": 8.545890782365149
+  },
+  "cross_validation": null
+}

@@ -231,6 +231,16 @@ class DataProcessing:
         
         print("Kalman smoothing complete! Added 'weight_smoothed' to weight history data.")
         return self.objects
+
+    def signed_log_transform(self, x):
+        """
+        Apply a sign-preserving logarithmic transformation.
+        For positive values: ln(x + 1)
+        For negative values: -ln(|x| + 1)
+        For zero: 0
+        """
+        return np.sign(x) * np.log1p(np.abs(x))
+
          
     def _process_single_window(self, cow_data, weight_history, feed_history, medical_history, x, n_weighing, use_smoothed=True, n_start=2):
         """
@@ -318,6 +328,7 @@ class DataProcessing:
         if use_smoothed:
             ret_dict['pred_weight_gain_raw'] = ret_dict['pred_weight_raw'] - ret_dict['weight_raw']
         ret_dict['pred_adgLatest_average'] = ret_dict['pred_weight_gain'] / ret_dict['day_diff']
+        ret_dict['pred_adgLatest_average_log'] = self.signed_log_transform(ret_dict['pred_adgLatest_average']) 
         ret_dict['pred_adgLatest_average_2'] = ret_dict['pred_adgLatest_average']**2 
         ret_dict['pred_adgLatest_average_inverse_hyperbolic'] = (
             np.log(ret_dict['pred_adgLatest_average'] + 
@@ -372,10 +383,12 @@ class DataProcessing:
         ret_dict['mw_ratio_dmi_dt'] = ret_dict['mw_ratio_dmi']/ret_dict['day_diff']
 
         ret_dict['mw_dmi_dt_ratio'] = ret_dict['mw_dmi_dt']*ret_dict['increase_ratio']
+        ret_dict['mw_dmi_dt_ratio_log'] = np.log(ret_dict['mw_dmi_dt']*ret_dict['increase_ratio'])
 
         ret_dict['mw_dmi_dt_2'] = ret_dict['mw_dmi_dt']**2 
         ret_dict['day_diff_2_dmi'] = ret_dict['day_diff_2'] * ret_dict['total_dmi']
         ret_dict['day_diff_dmi'] = ret_dict['day_diff'] * ret_dict['total_dmi']
+        ret_dict['day_diff_dmi_log'] = np.log(ret_dict['day_diff'] * ret_dict['total_dmi'])
 
         ret_dict['mw_dmi'] = (ret_dict['metabolic_weight']*ret_dict['total_dmi'])
         if ret_dict['breed'] == 'Other':
@@ -415,6 +428,11 @@ class DataProcessing:
 
 
         ret_dict['hasBEF_dmi_dt'] = (int(ret_dict['hasBEF'])/ret_dict['day_diff'])*ret_dict['total_dmi']
+        if ret_dict['hasBEF_dmi_dt'] == 0:
+            ret_dict['hasBEF_dmi_dt_log'] = 0
+        else:
+            ret_dict['hasBEF_dmi_dt_log'] = np.log((int(ret_dict['hasBEF'])/ret_dict['day_diff'])*ret_dict['total_dmi'])
+
         ret_dict['hasBEF_dmi'] = (int(ret_dict['hasBEF']))*ret_dict['total_dmi']
         ret_dict['hasBEF_dmi_dt_2'] =ret_dict['hasBEF_dmi_dt']**2 
         ret_dict['hasBEF_ddmi'] = int(ret_dict['hasBEF'])*ret_dict['total_dmi']

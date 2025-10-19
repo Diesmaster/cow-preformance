@@ -2,7 +2,7 @@ import numpy as np
 
 from data_processor.DataProcessor import DataProcessing
 from base_models.OLSModel import OLSModel
-from base_models.FixedEffectsModel import FixedEffectsModel 
+from base_models.MixedEffectsModel import MixedEffectsModel 
 from base_models.PanelOLS import PanelOLSModel 
 from base_models.SIMEXModel import SIMEXModel 
 from models.models import models, OLS_models
