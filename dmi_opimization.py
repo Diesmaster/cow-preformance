@@ -10,12 +10,12 @@ coefficients = {
 }
 
 
-start_weight = 350
-current_weight = 400
+start_weight = 250
+current_weight = 550
 silage_percentage = 0
-rumput_percentage = 0.4
-slobber_percentage = 0.6
-day_diff = 10
+rumput_percentage = 0.2
+slobber_percentage = 0.8
+day_diff = 30
 
 
 metabolic_weight = current_weight**0.75
@@ -50,4 +50,6 @@ profit = ((price_per_kg_cattle/price_per_adg_increase)-1)*100
 print(f"price to add 1 kg to adg: {price_per_adg_increase}")
 print(f"profit on increase: {profit}")
 print(f"increase? {increase}")
+
+# similar tactik for exit weight
 
