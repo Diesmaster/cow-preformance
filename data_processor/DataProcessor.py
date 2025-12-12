@@ -143,9 +143,11 @@ class DataProcessing:
             dict: Dictionary of cow data objects with their associated histories.
         """
         cows = self.load_json_data(self.cows_data)
+        print(f"cows: {len(cows)}")
         weight_histories = self.load_json_data(self.cow_weight_history_data)
         feed_histories = self.load_json_data(self.cow_feed_history_data)
         historic_cows = self.load_json_data(self.historic_cows_data)
+        print(f"his cows: {len(historic_cows)}")
         medical_histories = self.load_json_data(self.medical_history_data)
 
         cows = cows | historic_cows
@@ -292,11 +294,11 @@ class DataProcessing:
 
        
         # Breed indicators
-        ret_dict['isLimousine'] = (ret_dict['breed'] == 'Limousin')
-        ret_dict['isSimental'] = (ret_dict['breed'] == 'Simental')
+        ret_dict['isLimousine'] = (ret_dict['breed'] == 'Limousin') or (ret_dict['breed'] == 'Limousine')
+        ret_dict['isSimental'] = (ret_dict['breed'] == 'Simental') or (ret_dict['breed'] == 'Simmental')
        
 
-        if ret_dict['breed'] not in ['Limousin', 'Simental']:
+        if ret_dict['breed'] not in ['Limousin', 'Simental', 'Limousine', 'Simmental']:
             ret_dict['breed'] = 'Other'
 
         ret_dict['entryWeight'] = cow_data.entryWeight
@@ -476,10 +478,10 @@ class DataProcessing:
             last_window = None
             time = 0
             
-            #print(f"cow_id: {cow_id}, breed: {cow_data.breed}")
+            print(f"cow_id: {cow_data.cattleId}, breed: {cow_data.breed}")
 
 
-            n_start = 3
+            n_start = 0
 
             for x in range(n_start, len(weight_history.data) - n_weighing, n_weighing):
 
@@ -489,7 +491,8 @@ class DataProcessing:
                     use_smoothed=use_smoothed,
                     n_start=n_start
                 )
-              
+             
+
                 if window_data is None:
                     continue
                
@@ -503,6 +506,7 @@ class DataProcessing:
            
 
                 last_window = window_data
+            print(len(ret_arr))
 
         return ret_arr
 
@@ -519,7 +523,7 @@ class DataProcessing:
         # STEP 0: Load data first if not already loaded
         if self.objects is None:
             self.get_data()
-        
+       
         # STEP 1: Apply smoothing to raw weight data if requested
         if apply_smoothing:
             print("\n=== Applying Kalman smoothing to raw weight data ===")

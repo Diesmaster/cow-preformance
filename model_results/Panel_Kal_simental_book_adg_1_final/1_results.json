@@ -1,0 +1,67 @@
+{
+  "title": "Panel_Kal_simental_book_adg_1_final",
+  "n": 1,
+  "group_col": "cow_id",
+  "time_col": "pred_date",
+  "entity_effects": true,
+  "time_effects": false,
+  "independent_variables": [
+    "mw_dmi_dt_ratio",
+    "tdn_silage_dt",
+    "tdn_rumput_dt",
+    "tdn_slobber_dt",
+    "tdn_SP2A_dt",
+    "tdn_ricehay_dt",
+    "day_diff_dmi"
+  ],
+  "dependent_variable": "pred_adgLatest_average",
+  "summary": {
+    "r2": 0.42495537805208083,
+    "r2_within": 0.42495537805208083,
+    "r2_between": -5.558498292135921,
+    "r2_overall": -1.2873721327904795,
+    "f_statistic": 6.545388562314593,
+    "f_pvalue": 8.591663456902765e-06,
+    "n_entities": 11,
+    "n_obs": 80,
+    "mean_fixed_effect": 0.5082358145937941
+  },
+  "coefficients": {
+    "mw_dmi_dt_ratio": -0.0006841443890014647,
+    "tdn_silage_dt": 0.12038112085067168,
+    "tdn_rumput_dt": 0.1712204278313176,
+    "tdn_slobber_dt": 0.1122629917618482,
+    "tdn_SP2A_dt": -0.01926680032524557,
+    "tdn_ricehay_dt": -1.4733839843817518,
+    "day_diff_dmi": -8.206293279987867e-05
+  },
+  "std_errors": {
+    "mw_dmi_dt_ratio": 0.0002515794943194251,
+    "tdn_silage_dt": 0.08931522728796482,
+    "tdn_rumput_dt": 0.08849515393983315,
+    "tdn_slobber_dt": 0.17328456946910925,
+    "tdn_SP2A_dt": 0.13542161586138313,
+    "tdn_ricehay_dt": 1.5489036522881778,
+    "day_diff_dmi": 2.6905684059853613e-05
+  },
+  "pvalues": {
+    "mw_dmi_dt_ratio": 0.008472812316828726,
+    "tdn_silage_dt": 0.18261966659922635,
+    "tdn_rumput_dt": 0.057580381263048874,
+    "tdn_slobber_dt": 0.5194717681614227,
+    "tdn_SP2A_dt": 0.8873259308854207,
+    "tdn_ricehay_dt": 0.34517460979893855,
+    "day_diff_dmi": 0.0033639741240598653
+  },
+  "diagnostics": {
+    "residual_normality": {
+      "anderson_darling_stat": 2.9076843317656085,
+      "pvalue": 2.2494713663362972e-07
+    },
+    "durbin_watson": 1.6633575958156641,
+    "n_entities": 11,
+    "n_obs": 80,
+    "mean_fixed_effect": 0.5082358145937941
+  },
+  "cross_validation": null
+}

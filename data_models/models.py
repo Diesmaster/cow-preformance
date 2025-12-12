@@ -130,7 +130,7 @@ class Models:
         'withersHeight': (int, float),
         'adgSecondLatest': (int, float),
         'chestDepth': (int, float),
-        'insurancePolis': str,
+        'insurancePolis': (str, float),
         'fcrLatest': (int, float),
         'farm': (str, NoneType),
         'origin': str,

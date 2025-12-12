@@ -90,20 +90,25 @@ def run_panel_model(df, independent_attr, dependent_attr, n, prefix, model_name,
 
 def filter_breed(df, model_name):
     """Filter dataframe by breed based on model name"""
+
+    model_name = model_name.lower()
+
     if model_name.startswith('simental'):
-        df_filtered = df[df['breed'] == 'Simental'].copy()
+        df_filtered = df[df['breed'].isin(['Simental', 'Simmental'])].copy()
         breed_name = 'Simental'
+
     elif model_name.startswith('limousine'):
-        df_filtered = df[df['breed'].isin(['Limousin'])].copy()
+        df_filtered = df[df['breed'].isin(['Limousin', 'Limousine'])].copy()
         breed_name = 'Limousin'
-        
+
     else:
         df_filtered = df.copy()
         breed_name = ''
-    
+
     print(f"\nFiltered to {breed_name if breed_name else 'all breeds'}: {len(df_filtered)} entries")
     return df_filtered, breed_name
 
+    
 
 def main():
     # Set up argument parser
@@ -164,7 +169,7 @@ Examples:
     parser.add_argument(
         '--measurement-noise',
         type=float,
-        default=400,
+        default=25,
         help='Measurement noise for Kalman filter (default: 400)'
     )
     
@@ -269,7 +274,7 @@ Examples:
 
         # Skip if model is marked to pass
         if model_config.get('pass', False) and args.model_name == None:
-            print(f"\nSkipping model '{model_name}' (marked as pass)")
+            # print(f"\nSkipping model '{model_name}' (marked as pass)")
             continue
         
         dependent_attr = model_config['depended_attr']
@@ -286,7 +291,8 @@ Examples:
             print(f"\n{'='*80}")
             print(f"Dataset n = {n} (size: {len(df)} entries)")
             print(f"{'='*80}\n")
-            
+          
+
             # Filter by breed if needed
             df_filtered, breed_prefix = filter_breed(df, ori_model_name)
            

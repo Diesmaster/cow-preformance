@@ -19,7 +19,7 @@ models = {
         },        
         'limousine_book_adg_1_naive':
         {
-            'pass':False,
+            'pass':True,
             'depended_attr': 'pred_adgLatest_average', 
             'indpended_attr':   [ 'weight', 'total_dmi', 'total_dmi_log', 'FeedRatio', 'day_diff']
         },   
@@ -27,9 +27,14 @@ models = {
         {
             'pass':False,
             'depended_attr': 'pred_adgLatest_average', 
-            'indpended_attr':   [ 'hasBEF_dmi_dt', 'mw_dmi_dt_ratio',  'tdn_silage_dt', 'tdn_rumput_dt', 'tdn_slobber_dt', 'day_diff_dmi']
+            'indpended_attr':   [  'mw_dmi_dt_ratio',  'tdn_silage_dt', 'tdn_rumput_dt', 'tdn_slobber_dt', 'tdn_SP2A_dt', 'tdn_ricehay_dt', 'day_diff_dmi']
         },
-        'limousine_book_adg_1_final_log':
+         'simental_book_adg_1_final':
+        {
+            'pass':False,
+            'depended_attr': 'pred_adgLatest_average', 
+            'indpended_attr':   [  'mw_dmi_dt_ratio',  'tdn_silage_dt', 'tdn_rumput_dt', 'tdn_slobber_dt', 'tdn_SP2A_dt', 'tdn_ricehay_dt', 'day_diff_dmi']
+        },       'limousine_book_adg_1_final_log':
         {
             'pass':True,
             'depended_attr': 'pred_adgLatest_average_log', 
@@ -37,13 +42,13 @@ models = {
         },
     'limousine_book_fcr_1_final':
         {
-            'pass':False,
+            'pass':True,
             'depended_attr': 'pred_fcrLatest_average', 
             'indpended_attr':   [ 'hasBEF', 'mw_ratio', 'tdn_silage_ddmi', 'tdn_rumput_ddmi', 'tdn_slobber_ddmi', 'day_diff_2' ]
         },
     'limousine_book_wg_1_final':
         {
-            'pass':False,
+            'pass':True,
             'depended_attr': 'pred_weight_gain', 
             'indpended_attr':   [ 'hasBEF_dmi', 'mw_ratio_dmi', 'tdn_silage', 'tdn_rumput', 'tdn_slobber', 'day_diff_2_dmi']
         },
@@ -88,19 +93,19 @@ models = {
 OLS_models = {
         'limousine_book_adg_1_final':
             {
-                'pass':False,
+                'pass':True,
                 'depended_attr': 'pred_adgLatest_average', 
                 'indpended_attr':   [ 'startWeight', 'hasBEF_dmi_dt', 'mw_dmi_dt_ratio',  'tdn_silage_dt', 'tdn_rumput_dt', 'tdn_slobber_dt', 'day_diff_dmi']
             },
         'limousine_book_fcr_1_final':
             {
-                'pass':False,
+                'pass':True,
                 'depended_attr': 'pred_fcrLatest_average', 
                 'indpended_attr':   [ 'startWeight', 'hasBEF', 'mw_ratio', 'tdn_silage_ddmi', 'tdn_rumput_ddmi', 'tdn_slobber_ddmi', 'day_diff_2' ]
             },
         'limousine_book_wg_1_final':
             {
-                'pass':False,
+                'pass':True,
                 'depended_attr': 'pred_weight_gain', 
                 'indpended_attr':   [ 'startWeight', 'hasBEF_dmi', 'mw_ratio_dmi', 'tdn_silage', 'tdn_rumput', 'tdn_slobber', 'day_diff_2_dmi']
             }

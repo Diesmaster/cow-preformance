@@ -110,6 +110,11 @@ class KalmanSmoother:
             # Extract observations
             observations = entity_df[target_attr].values
             
+            # Extract time index if available
+            time_index = None
+            if time_attr is not None:
+                time_index = pd.to_datetime(entity_df[time_attr])
+            
             # Skip if all NaN
             if np.all(np.isnan(observations)):
                 print(f"  Entity {entity}: All NaN, skipping...")
@@ -121,10 +126,11 @@ class KalmanSmoother:
                 continue
             
             try:
-                # Fit Kalman filter/smoother
+                # Fit Kalman filter/smoother with time information
                 filtered, smoothed, smoothed_se = self._fit_entity(
                     observations, 
-                    entity_id=entity
+                    entity_id=entity,
+                    time_index=time_index  # Pass time information!
                 )
                 
                 # Store results
@@ -147,7 +153,7 @@ class KalmanSmoother:
         print(f"\nSuccessfully smoothed {n_smoothed}/{len(df_result)} observations")
        
         if print_results == True:
-            self.print_summary() #df_result, smoothed_col, target_attr
+            self.print_summary()
 
         return df_result
 
@@ -187,12 +193,10 @@ class KalmanSmoother:
         print(f"  Max:  {np.max(state_vars):.4f}")
         
         print(f"\nSignal-to-noise ratio (σ²_state / σ²_obs):")
-        if clean_obs_vars:  # Only calculate if we have valid values
+        if clean_obs_vars:
             snr = [s/o for s, o in zip(clean_state_vars, clean_obs_vars)]
-            # Use median instead of mean for SNR to avoid outliers
             median_snr = np.median(snr)
             print(f"  Median: {median_snr:.4f}")
-            # Provide a more robust range
             print(f"  25th percentile: {np.percentile(snr, 25):.4f}")
             print(f"  75th percentile: {np.percentile(snr, 75):.4f}")
         else:
@@ -205,21 +209,28 @@ class KalmanSmoother:
         print(f"  Max:  {np.max(aics):.2f}")
         print("=" * 70)
 
-    def _fit_entity(self, observations, entity_id=None):
+    def _fit_entity(self, observations, entity_id=None, time_index=None):
         """
         Fit Kalman filter/smoother for a single entity.
         
         Args:
             observations: Array of observations (can contain NaN)
             entity_id: Identifier for this entity (for storing results)
+            time_index: DatetimeIndex for irregular time spacing (IMPORTANT!)
         
         Returns:
             filtered: Filtered state estimates
             smoothed: Smoothed state estimates
             smoothed_se: Standard errors of smoothed estimates
         """
+        # CRITICAL: Convert to pandas Series with DatetimeIndex if time_index provided
+        # This allows statsmodels to handle irregular time spacing automatically
+        if time_index is not None:
+            endog = pd.Series(observations, index=time_index)
+        else:
+            endog = observations
+        
         # Build the model
-        # Local level model: level follows random walk, observations = level + noise
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             
@@ -227,24 +238,19 @@ class KalmanSmoother:
             if self.fix_measurement_noise and self.measurement_noise is not None:
                 # Fix observation variance, only estimate state variance
                 model = UnobservedComponents(
-                    endog=observations,
+                    endog=endog,  # Now includes time information!
                     level='local linear trend' if self.use_trend else 'local level',
                     irregular=True,
                     stochastic_level=True,
-                    stochastic_trend=self.use_trend  # Allow trend to vary if using trend
+                    stochastic_trend=self.use_trend
                 )
-                
-                # Don't use initialize_known for trend model - it causes dimension issues
-                # Instead, we'll just use constrained optimization
                 
                 # Set starting parameters
                 state_var = self.process_noise if self.process_noise is not None else np.nanvar(observations) * 0.1
                 
                 if self.use_trend:
-                    # Trend model has 3 parameters: [sigma2_irregular, sigma2_level, sigma2_trend]
                     start_params = [self.measurement_noise, state_var, state_var * 0.1]
                 else:
-                    # Level model has 2 parameters: [sigma2_irregular, sigma2_level]
                     start_params = [self.measurement_noise, state_var]
                 
                 # Fit with fixed observation variance
@@ -254,10 +260,8 @@ class KalmanSmoother:
                     def neg_loglike(params):
                         """Negative log-likelihood with fixed obs variance."""
                         if self.use_trend:
-                            # params = [state_var, trend_var]
                             full_params = np.array([self.measurement_noise, params[0], params[1]])
                         else:
-                            # params = [state_var]
                             full_params = np.array([self.measurement_noise, params[0]])
                         
                         model.update(full_params)
@@ -299,11 +303,11 @@ class KalmanSmoother:
             else:
                 # Standard model - estimate both variances
                 model = UnobservedComponents(
-                    endog=observations,
+                    endog=endog,  # Now includes time information!
                     level='local linear trend' if self.use_trend else 'local level',
                     irregular=True,
                     stochastic_level=True,
-                    stochastic_trend=self.use_trend  # Allow trend to vary if using trend
+                    stochastic_trend=self.use_trend
                 )
                 
                 # Set starting parameters if provided
@@ -311,7 +315,11 @@ class KalmanSmoother:
                 if self.measurement_noise is not None or self.process_noise is not None:
                     obs_var = self.measurement_noise if self.measurement_noise is not None else np.nanvar(observations) * 0.5
                     state_var = self.process_noise if self.process_noise is not None else np.nanvar(observations) * 0.1
-                    start_params = [obs_var, state_var]
+                    
+                    if self.use_trend:
+                        start_params = [obs_var, state_var, state_var * 0.1]
+                    else:
+                        start_params = [obs_var, state_var]
                 
                 # Fit the model
                 try:
@@ -392,7 +400,7 @@ class KalmanSmoother:
         
         # Get time values
         if time_attr is not None:
-            time_vals = entity_df[time_attr].values
+            time_vals = pd.to_datetime(entity_df[time_attr])
             xlabel = time_attr
         else:
             time_vals = np.arange(len(entity_df))
@@ -473,7 +481,7 @@ class KalmanSmoother:
             
             # Get time values
             if time_attr is not None:
-                time_vals = entity_df[time_attr].values
+                time_vals = pd.to_datetime(entity_df[time_attr])
             else:
                 time_vals = np.arange(len(entity_df))
             
@@ -500,4 +508,3 @@ class KalmanSmoother:
         if save and save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
             print(f"Plot saved to {save_path}")
-        

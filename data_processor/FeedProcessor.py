@@ -90,49 +90,76 @@ class FeedProcessor:
         
         # Check if we have the required feed types
         self.has_required_feeds = (
-            ('Silase Jagung' in ration or 'Rumput' in ration) and 
-            'Slobber Mix' in ration
+            ('Silase Jagung' in ration or 'Rumput' in ration or 'Pakchong Grass - Qurban') and 
+            ('Slobber Mix' in ration or 'SP2B Mix' in ration or 'SP2A Mix' in ration)
         )
-        
+       
         if not self.has_required_feeds:
             return
-        
+       
+        #Rice Hay
+
         # Calculate feed dry matter amounts
         silage_dm = ration.get('Silase Jagung', {}).get('asFedIntakePerCow', 0) * 0.3
-        grass_dm = ration.get('Rumput', {}).get('asFedIntakePerCow', 0) * 0.2
-        slobber_dm = ration['Slobber Mix']['asFedIntakePerCow'] * 0.4506
+        grass_dm = ration.get('Rumput', ration.get('Pakchong Grass - Qurban', {})).get('asFedIntakePerCow', 0) * 0.2
+
+        self.rice_hay_dm = 0 
+        if 'Rice Hay' in ration:
+            self.rice_hay_dm = ration['Rice Hay']['asFedIntakePerCow'] * 0.85
+
+        self.slobber_dm = 0 
+        if 'Slobber Mix' in ration:
+            self.slobber_dm  = ration['Slobber Mix']['asFedIntakePerCow'] * 0.4506
+
+        self.SP2B_mix_dm = 0
+        if 'SP2B Mix' in ration:
+            self.SP2B_mix_dm = ration['SP2B Mix']['asFedIntakePerCow'] * 0.8623 
+
+        self.SP2A_mix_dm = 0   
+        if 'SP2A Mix' in ration:
+            self.SP2A_mix_dm = ration['SP2A Mix']['asFedIntakePerCow'] * 0.8623
         
-        self.dm_total = silage_dm + grass_dm + slobber_dm
+        self.dm_total = silage_dm + grass_dm + self.slobber_dm + self.SP2B_mix_dm + self.SP2A_mix_dm
         self.dm_total_dt = self.dm_total/self.day_diff
         
 
         self.silage_dm = silage_dm
         self.grass_dm = grass_dm
-        self.slobber_dm = slobber_dm
         self.green_dm = silage_dm + grass_dm
         
         # TDN calculations
         self.tdn_silage = silage_dm * tdn_table['silage']
+        self.tdn_ricehay = self.rice_hay_dm * tdn_table['Rice Hay']
         self.tdn_rumput = grass_dm * tdn_table['grass']
-        self.tdn_slobber = slobber_dm * tdn_table['slobber']
+        self.tdn_slobber = self.slobber_dm * tdn_table['slobber']
+        self.tdn_SP2B_mix = self.SP2B_mix_dm * tdn_table['SP2B mix']
+        self.tdn_SP2A_mix = self.SP2A_mix_dm * tdn_table['SP2A mix']
+        self.tdn_new_concentrat = self.tdn_SP2B_mix + self.tdn_SP2A_mix 
+
 
         self.pk_silage = silage_dm *pk_table['silage']
         self.pk_rumput = grass_dm * pk_table['grass']
-        self.pk_slobber = slobber_dm *pk_table['slobber']
+        self.pk_ricehay = self.rice_hay_dm * pk_table['Rice Hay']
+        self.pk_slobber = self.slobber_dm *pk_table['slobber']
+        self.pk_sp2b = self.SP2B_mix_dm *pk_table['SP2B mix']
+        self.pk_sp2a = self.SP2A_mix_dm *pk_table['SP2A mix']
 
-        self.pk_total = self.pk_silage + self.pk_rumput + self.pk_slobber
+
+        self.pk_total = self.pk_silage + self.pk_rumput + self.pk_slobber + self.pk_sp2a + self.pk_sp2b + self.pk_ricehay
 
         self.pk_per = self.pk_total / self.dm_total
 
-        self.total_tdn = self.tdn_slobber + self.tdn_silage + self.tdn_rumput
+        self.total_tdn = self.tdn_SP2A_mix + self.tdn_SP2B_mix + self.tdn_slobber + self.tdn_silage + self.tdn_rumput + self.tdn_ricehay
        
         self.per_slobber_tdn = self.tdn_slobber/self.total_tdn 
         self.per_rumput_tdn = self.tdn_rumput/self.total_tdn 
         self.per_silage_tdn = self.tdn_silage/self.total_tdn 
 
+        self.not_greens = self.slobber_dm + self.SP2A_mix_dm + self.SP2B_mix_dm
+
         # Feed ratios and percentages
-        self.feed_ratio = self.green_dm / self.slobber_dm if self.slobber_dm > 0 else 0
-        self.per_slobber_dm = self.slobber_dm / self.total_dm_intake if self.total_dm_intake > 0 else 0
+        self.feed_ratio = self.green_dm / self.not_greens if self.slobber_dm > 0 else 0
+        self.per_slobber_dm = self.not_greens / self.total_dm_intake if self.total_dm_intake > 0 else 0
         self.per_green_dm = self.green_dm / self.total_dm_intake if self.total_dm_intake > 0 else 0
         
         # Cost calculations
@@ -145,7 +172,7 @@ class FeedProcessor:
             self.greens_cost_per_kg = costs_per_dm['silage']
         
         self.greens_cost = silage_dm * costs_per_dm['silage'] + grass_dm * costs_per_dm['grass']
-        self.slobber_cost = slobber_dm * costs_per_dm['slobber']
+        self.slobber_cost = self.slobber_dm * costs_per_dm['slobber']
         self.feed_cost = self.greens_cost + self.slobber_cost
         self.feed_cost_per_dm = self.feed_cost / self.total_dm_intake if self.total_dm_intake > 0 else 0
         
@@ -157,8 +184,10 @@ class FeedProcessor:
         self.tdn_silage_dt = self.tdn_silage / self.day_diff
         self.tdn_rumput_dt = self.tdn_rumput / self.day_diff
         self.tdn_slobber_dt = self.tdn_slobber / self.day_diff
-
-
+        self.tdn_new_concentrat_dt = self.tdn_new_concentrat / self.day_diff
+        self.tdn_sp2a_dt = self.tdn_SP2A_mix / self.day_diff
+        self.tdn_ricehay_dt = self.tdn_ricehay / self.day_diff
+        self.tdn_sp2b_dt = self.tdn_SP2B_mix / self.day_diff
 
         
         self.total_tdn_greens = self.tdn_silage + self.tdn_rumput
@@ -192,7 +221,7 @@ class FeedProcessor:
         # Calculate squared transformations for key feed composition metrics
         self.silage_dm_squared = silage_dm ** 2
         self.grass_dm_squared = grass_dm ** 2
-        self.slobber_dm_squared = slobber_dm ** 2
+        self.slobber_dm_squared = self.slobber_dm ** 2
         self.green_dm_squared = self.green_dm ** 2
         self.total_tdn_squared = self.total_tdn ** 2
         self.feed_ratio_squared = self.feed_ratio ** 2
@@ -212,7 +241,7 @@ class FeedProcessor:
         # Calculate log transformations for key feed composition metrics
         self.silage_dm_log = np.log(silage_dm) if silage_dm > 0 else np.nan
         self.grass_dm_log = np.log(grass_dm) if grass_dm > 0 else np.nan
-        self.slobber_dm_log = np.log(slobber_dm) if slobber_dm > 0 else np.nan
+        self.slobber_dm_log = np.log(self.slobber_dm) if self.slobber_dm > 0 else np.nan
         self.green_dm_log = np.log(self.green_dm) if self.green_dm > 0 else np.nan
         self.total_tdn_log = np.log(self.total_tdn) if self.total_tdn > 0 else np.nan
         self.feed_ratio_log = np.log(self.feed_ratio) if self.feed_ratio > 0 else np.nan
@@ -304,6 +333,10 @@ class FeedProcessor:
             'tdn_rumput_dt_log': self.tdn_rumput_dt_log,
             'silage_x_rumput_tdn': self.tdn_rumput_over_mw_dt*self.tdn_slobber_over_mw_dt,
             'tdn_slobber_dt': self.tdn_slobber_dt,
+            'tdn_new_concentrat_dt': self.tdn_new_concentrat_dt,
+            'tdn_ricehay_dt': self.tdn_ricehay_dt,
+            'tdn_SP2A_dt': self.tdn_sp2a_dt,
+            'tdn_SP2B_dt': self.tdn_sp2b_dt,
             'tdn_slobber_dt_log': self.tdn_slobber_dt_log,
             'total_tdn_greens_over_mw': self.total_tdn_greens_over_mw,
             'total_tdn_greens_over_mw_dt': self.total_tdn_greens_over_mw_dt,
@@ -319,9 +352,12 @@ class FeedProcessor:
             'tdn_silage_over_mw': self.tdn_silage_over_mw,
             'tdn_rumput_over_mw': self.tdn_rumput_over_mw,
             'silage_rumput_mw': self.tdn_silage_over_mw*self.tdn_rumput_over_mw,
-            'greens_slobber_mw': self.total_tdn_greens_over_mw/self.tdn_slobber_over_mw,
-
-            'greens_slobber_mw_2': (self.total_tdn_greens_over_mw/self.tdn_slobber_over_mw),
+            'greens_slobber_mw': (
+                self.total_tdn_greens_over_mw / self.tdn_slobber_over_mw
+                if self.tdn_slobber_over_mw != 0
+                else 0
+            ),
+            'greens_slobber_mw_2': (self.total_tdn_greens_over_mw/self.tdn_slobber_over_mw if self.tdn_slobber_over_mw != 0 else 0),
             'tdn_slobber_over_mw': self.tdn_slobber_over_mw,
             'tdn_slobber_over_mw_2': self.tdn_slobber_over_mw**2,
             'total_tdn_2_dt_dmi': self.total_tdn_2_dt_dmi,
