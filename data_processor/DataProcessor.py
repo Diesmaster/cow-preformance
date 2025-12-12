@@ -4,7 +4,6 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 
-
 from data_objects.cow_data import CowData
 from data_objects.feed_history_data import FeedHistoryData
 from data_objects.medical_history_data import MedicalHistoryData
@@ -158,291 +157,8 @@ class DataProcessing:
         feed_histories = self.fix_numbers_dic_of_dic(feed_histories)
         medical_histories = self.fix_numbers_dic_of_dic(medical_histories)
 
-        self.objects = self.cast_to_obj(cows, weight_histories, feed_histories, medical_histories )
+        self.objects = self.cast_to_obj(cows, weight_histories, feed_histories, medical_histories)
         return self.objects 
-
-    def apply_kalman_smoothing(self, measurement_noise=400, process_noise=None):
-        """
-        Apply Kalman smoothing to weight data for all cows.
-        This should be called after get_data() but before get_variables().
-        
-        Args:
-            measurement_noise: Expected measurement error variance (default: 400 = 20^2)
-            process_noise: Process noise variance (None = auto-estimate)
-        
-        Returns:
-            dict: Smoothed weight data added to self.objects
-        """
-        if self.objects is None:
-            raise ValueError("Must call get_data() first")
-        
-        print("Applying Kalman smoothing to cow weights...")
-       
-        fix_measurement_noise = False 
-        use_trend = True
-
-        # Create smoother
-        smoother = KalmanSmoother(
-            measurement_noise=measurement_noise,
-            process_noise=process_noise,
-            fix_measurement_noise=fix_measurement_noise,
-            use_trend=use_trend 
-        )
-
-        
-        # Prepare data for smoothing
-        weight_records = []
-        for cow_id, cow_dict in self.objects.items():
-            weight_history = cow_dict['weight_history_data']
-            
-            for idx, entry in enumerate(weight_history.data):
-                weight_records.append({
-                    'cow_id': cow_id,
-                    'date': entry['date'],
-                    'weight': entry['weight'],
-                    'index': idx  # Keep track of original index
-                })
-        
-        # Create DataFrame
-        weight_df = pd.DataFrame(weight_records)
-        weight_df['date'] = pd.to_datetime(weight_df['date'])
-        
-        # Apply smoothing
-        smoothed_df = smoother.filter(
-            df=weight_df,
-            target_attr='weight',
-            group_attr='cow_id',
-            time_attr='date'
-        )
-        
-        # Print summary
-        smoother.print_summary()
-        
-        # Add smoothed weights back to objects
-        for cow_id, cow_dict in self.objects.items():
-            cow_smoothed = smoothed_df[smoothed_df['cow_id'] == cow_id].copy()
-            cow_smoothed = cow_smoothed.sort_values('date').reset_index(drop=True)
-            
-            # Add smoothed values to weight history
-            weight_history = cow_dict['weight_history_data']
-            for i, entry in enumerate(weight_history.data):
-                if i < len(cow_smoothed):
-                    entry['weight_smoothed'] = cow_smoothed.iloc[i]['weight_smoothed']
-                    entry['weight_smoothed_se'] = cow_smoothed.iloc[i]['weight_smoothed_se']
-                    entry['weight_filtered'] = cow_smoothed.iloc[i]['weight_filtered']
-        
-        print("Kalman smoothing complete! Added 'weight_smoothed' to weight history data.")
-        return self.objects
-
-    def signed_log_transform(self, x):
-        """
-        Apply a sign-preserving logarithmic transformation.
-        For positive values: ln(x + 1)
-        For negative values: -ln(|x| + 1)
-        For zero: 0
-        """
-        return np.sign(x) * np.log1p(np.abs(x))
-
-         
-    def _process_single_window(self, cow_data, weight_history, feed_history, medical_history, x, n_weighing, use_smoothed=True, n_start=2):
-        """
-        Processes a single non-overlapping window for a cow.
-        
-        Args:
-            cow_data: CowData object
-            weight_history: WeightHistoryData object
-            feed_history: FeedHistoryData object
-            x (int): Starting index in weight history
-            n_weighing (int): Number of weighings in this window
-            use_smoothed (bool): If True, use smoothed weights if available
-            
-        Returns:
-            dict or None: Dictionary of features, or None if window should be skipped
-        """
-        entry = weight_history.data[x]
-        ret_dict = {}
-        
-        # ===== SUPER PRIMITIVES =====
-        target_weighing = x + n_weighing
-        ret_dict['pred_date'] = weight_history.data[target_weighing]['date']
-
-        ret_dict['date'] = entry['date']
-        ret_dict['startWeight'] = weight_history.data[0]['weight']
-
-        ret_dict['day_diff'] = (datetime.strptime(ret_dict['pred_date'], "%Y-%m-%d") - 
-                               datetime.strptime(ret_dict['date'], "%Y-%m-%d")).days
-        ret_dict['day_diff_2'] = ret_dict['day_diff']**2
-        ret_dict['day_diff_recp'] = ret_dict['day_diff']**2
-      
-        ret_dict['theoritical_error_adg'] = 20/ret_dict['day_diff']
-
-        # USE SMOOTHED WEIGHT IF AVAILABLE
-        if use_smoothed and 'weight_smoothed' in entry:
-            ret_dict['weight'] = entry['weight_smoothed']
-            ret_dict['weight_raw'] = entry['weight']  # Keep original
-        else:
-            ret_dict['weight'] = entry['weight']
-        
-        ret_dict['cattleId'] = cow_data.cattleId
-        ret_dict['originWeight'] = cow_data.originWeight
-        ret_dict['originWeight_dt'] = cow_data.originWeight/ret_dict['day_diff']
-        ret_dict['hipHeight'] = cow_data.hipHeight
-        ret_dict['breed'] = cow_data.breed
-
-        #if ret_dict['breed'] == 'Limousin X':
-        #    ret_dict['breed'] = 'Limousin'
-
-       
-        # Breed indicators
-        ret_dict['isLimousine'] = (ret_dict['breed'] == 'Limousin') or (ret_dict['breed'] == 'Limousine')
-        ret_dict['isSimental'] = (ret_dict['breed'] == 'Simental') or (ret_dict['breed'] == 'Simmental')
-       
-
-        if ret_dict['breed'] not in ['Limousin', 'Simental', 'Limousine', 'Simmental']:
-            ret_dict['breed'] = 'Other'
-
-        ret_dict['entryWeight'] = cow_data.entryWeight
-        
-        # ===== PROCESS FEED DATA =====
-        feed_processor = FeedProcessor(feed_history, weight_history, x, n_weighing)
-        
-        # Skip if required feeds not present
-        if not feed_processor.has_required_feeds:
-            return None
-        
-        # Get all feed features
-        feed_features = feed_processor.get_all_features()
-        ret_dict.update(feed_features)
-       
-
-        # ===== TARGET BASICS =====
-        # USE SMOOTHED PRED_WEIGHT IF AVAILABLE
-        target_entry = weight_history.data[target_weighing]
-        if use_smoothed and 'weight_smoothed' in target_entry:
-            ret_dict['pred_weight'] = target_entry['weight_smoothed']
-            ret_dict['pred_weight_raw'] = target_entry['weight']
-        else:
-            ret_dict['pred_weight'] = target_entry['weight']
-        
-        # NOW ALL THESE CALCULATIONS USE SMOOTHED WEIGHTS
-        ret_dict['pred_weight_gain'] = ret_dict['pred_weight'] - ret_dict['weight']
-       
-        if use_smoothed:
-            ret_dict['pred_weight_gain_raw'] = ret_dict['pred_weight_raw'] - ret_dict['weight_raw']
-        ret_dict['pred_adgLatest_average'] = ret_dict['pred_weight_gain'] / ret_dict['day_diff']
-        ret_dict['pred_adgLatest_average_log'] = self.signed_log_transform(ret_dict['pred_adgLatest_average']) 
-        ret_dict['pred_adgLatest_average_2'] = ret_dict['pred_adgLatest_average']**2 
-        ret_dict['pred_adgLatest_average_inverse_hyperbolic'] = (
-            np.log(ret_dict['pred_adgLatest_average'] + 
-                   (ret_dict['pred_adgLatest_average']**2 + 1)**0.5) * 0.5
-        )
-        ret_dict['pred_fcrLatest_average'] = (
-            (ret_dict['pred_weight_gain'] / ret_dict['total_dm_intake']) * 100
-        )
-        
-        # ===== PRIMITIVES (now using smoothed weight) =====
-        ret_dict['metabolic_weight'] = (ret_dict['weight']*0.96)**0.75
-        ret_dict['pred_adgLatest_average_mw'] = (
-            (ret_dict['pred_weight_gain'] / ret_dict['day_diff']) * ret_dict['metabolic_weight']
-        )
-        ret_dict['originWeight_mw'] = ret_dict['originWeight'] * ret_dict['metabolic_weight']
-        
-        # Breed-specific metabolic weights
-        for breed_name in ['Simental', 'Limousin', 'Other']:
-            ret_dict[f'metabolic_weight_{breed_name}'] = 0
-            ret_dict[f'metabolic_weight_{breed_name}_mw'] = 0
-        
-        ret_dict[f'metabolic_weight_{ret_dict["breed"]}'] = ret_dict['metabolic_weight']
-        ret_dict[f'metabolic_weight_{ret_dict["breed"]}_mw'] = ret_dict['metabolic_weight']**2
-        
-        # Days on feed
-        ret_dict['daysOnFeedNow'] = (
-            datetime.strptime(ret_dict['date'], "%Y-%m-%d") - 
-            datetime.strptime(cow_data.entryDate, "%Y-%m-%d")
-        ).days
-        ret_dict['daysOnFeedNow_2'] = ret_dict['daysOnFeedNow']**2
-        ret_dict['daysOnFeed_then'] = ret_dict['daysOnFeedNow'] + ret_dict['day_diff']
-        
-        ret_dict['tdn_slobber_daysonfeed'] = ret_dict['tdn_slobber_over_mw_dt']*ret_dict['daysOnFeedNow']
-
-        ret_dict['originWeight_ddmi'] = ret_dict['originWeight'] / ret_dict['avg_dm_intake_per_day']
-        
-        # Breed-specific with ddmi
-        for breed_name in ['Simental', 'Limousin', 'Other']:
-            ret_dict[f'metabolic_weight_{breed_name}_ddmi'] = (
-                ret_dict[f'metabolic_weight_{breed_name}'] / ret_dict['avg_dm_intake_per_day']
-            )
-        
-
-        ret_dict['mw_per_ddmi'] = ret_dict['metabolic_weight']/ret_dict['avg_dm_intake_per_day']
-        ret_dict['mw_dmi_dt'] = (ret_dict['metabolic_weight']*ret_dict['total_dmi'])/ret_dict['day_diff']
-
-        ret_dict['mw_dmi_dt_dstartweight'] = ret_dict['mw_dmi_dt']/ret_dict['startWeight']
-
-        ret_dict['increase_ratio'] = ret_dict['weight']/ret_dict['startWeight']
-        ret_dict['mw_ratio'] = ret_dict['metabolic_weight']*ret_dict['increase_ratio']
-        ret_dict['mw_ratio_dmi'] = ret_dict['increase_ratio']*ret_dict['total_dmi'] 
-        ret_dict['mw_ratio_dmi_dt'] = ret_dict['mw_ratio_dmi']/ret_dict['day_diff']
-
-        ret_dict['mw_dmi_dt_ratio'] = ret_dict['mw_dmi_dt']*ret_dict['increase_ratio']
-        ret_dict['mw_dmi_dt_ratio_log'] = np.log(ret_dict['mw_dmi_dt']*ret_dict['increase_ratio'])
-
-        ret_dict['mw_dmi_dt_2'] = ret_dict['mw_dmi_dt']**2 
-        ret_dict['day_diff_2_dmi'] = ret_dict['day_diff_2'] * ret_dict['total_dmi']
-        ret_dict['day_diff_dmi'] = ret_dict['day_diff'] * ret_dict['total_dmi']
-        ret_dict['day_diff_dmi_log'] = np.log(ret_dict['day_diff'] * ret_dict['total_dmi'])
-
-        ret_dict['mw_dmi'] = (ret_dict['metabolic_weight']*ret_dict['total_dmi'])
-        if ret_dict['breed'] == 'Other':
-            return None
-
-
-        ## medical data
-        if not medical_history == None: 
-            if not medical_history.data == None:
-                ret_dict['hasBEF'] = medical_history.has_matching_agenda_entry(ret_dict['date'], ret_dict['pred_date'], 'BEF', False, not_contains=['suspected'])
-                ret_dict['gotHNMVaccination'] = medical_history.has_matching_agenda_entry(ret_dict['date'], ret_dict['pred_date'], 'HNM Vaccination', False)
-                ret_dict['gotDewormed'] = medical_history.has_matching_agenda_entry(ret_dict['date'], ret_dict['pred_date'], 'Worm Medication', False)
-                if ret_dict['gotDewormed']:
-                    ret_dict['gotWorms'] = False
-                else:
-                    ret_dict['gotWorms'] = medical_history.has_matching_agenda_entry(
-                        ret_dict['date'], 
-                        ret_dict['pred_date'], 
-                        'Worm', 
-                        False
-                    )
-                ret_dict['DaysSinceDewormed'] = medical_history.days_since_last_matching_agenda_entry(ret_dict['pred_date'], 'Worm Medication', False)
-            else:
-                ret_dict['hasBEF'] = False
-                ret_dict['gotWorms'] = False
-                ret_dict['gotHNMVaccination'] = False
-                ret_dict['gotDewormed'] = False
-                ret_dict['DaysSinceDewormed'] = 0
-
-        else:
-            ret_dict['hasBEF'] = False
-            ret_dict['gotHNMVaccination'] = False
-            ret_dict['gotDewormed'] = False
-            ret_dict['gotWorms'] = False
-            ret_dict['DaysSinceDewormed'] = 0
-
-
-
-        ret_dict['hasBEF_dmi_dt'] = (int(ret_dict['hasBEF'])/ret_dict['day_diff'])*ret_dict['total_dmi']
-        if ret_dict['hasBEF_dmi_dt'] == 0:
-            ret_dict['hasBEF_dmi_dt_log'] = 0
-        else:
-            ret_dict['hasBEF_dmi_dt_log'] = np.log((int(ret_dict['hasBEF'])/ret_dict['day_diff'])*ret_dict['total_dmi'])
-
-        ret_dict['hasBEF_dmi'] = (int(ret_dict['hasBEF']))*ret_dict['total_dmi']
-        ret_dict['hasBEF_dmi_dt_2'] =ret_dict['hasBEF_dmi_dt']**2 
-        ret_dict['hasBEF_ddmi'] = int(ret_dict['hasBEF'])*ret_dict['total_dmi']
-        ret_dict['gotDewormed_dt'] = int(ret_dict['gotDewormed'])/ret_dict['day_diff']
-        ret_dict['DaysSinceDewormed_dt'] = int(ret_dict['DaysSinceDewormed'])/ret_dict['day_diff']
-
-
-        return ret_dict
 
     def get_variables(self, n_weighing, use_smoothed=True):
         """
@@ -510,15 +226,231 @@ class DataProcessing:
 
         return ret_arr
 
-    def get_dfs(self, n_weighings: list, measurement_noise=400, apply_smoothing=True, cut_tails=False):
+    def signed_log_transform(self, x):
+        """
+        Apply a sign-preserving logarithmic transformation.
+        For positive values: ln(x + 1)
+        For negative values: -ln(|x| + 1)
+        For zero: 0
+        """
+        return np.sign(x) * np.log1p(np.abs(x))
+
+    def apply_kalman_smoothing(self, measurement_noise=None, process_noise_per_day=None, 
+                              estimate_drift=True, fixed_drift=None, auto_tune=True):
+        """
+        Apply Kalman smoothing to weight data with proper time-varying dynamics.
+        
+        This uses a Brownian motion with drift model:
+            X_t = X_{t-1} + μ·Δt + ε_t    where Var(ε_t) = σ²·Δt
+            Y_t = X_t + η_t                where Var(η_t) = R (constant)
+        
+        Args:
+            measurement_noise: Measurement error variance. If None and auto_tune=True, 
+                              will be estimated from data. Default: None
+            
+            process_noise_per_day: Process noise variance per day. If None and auto_tune=True,
+                                  will be estimated from data. Default: None
+            
+            estimate_drift: If True, estimates growth rate per cow via linear regression.
+                           If False, uses fixed_drift parameter. Default: True
+            
+            fixed_drift: Fixed drift rate in kg/day for all cows (only used if estimate_drift=False).
+                        Example: fixed_drift=1.5 means all cows grow at 1.5 kg/day
+            
+            auto_tune: If True, automatically estimates noise parameters via Maximum Likelihood.
+                      Parameters set to None will be estimated. Default: True
+        
+        Returns:
+            dict: self.objects with smoothed weights added to weight history
+        
+        Examples:
+            # Full auto-tuning (recommended)
+            processor.apply_kalman_smoothing(auto_tune=True)
+            
+            # Fix measurement noise, estimate process noise
+            processor.apply_kalman_smoothing(measurement_noise=400, auto_tune=True)
+            
+            # Manual parameters (no auto-tuning)
+            processor.apply_kalman_smoothing(
+                measurement_noise=400,
+                process_noise_per_day=2.0,
+                auto_tune=False
+            )
+        """
+        if self.objects is None:
+            raise ValueError("Must call get_data() first")
+        
+        # Determine what mode we're in
+        is_auto_tuning = auto_tune and (measurement_noise is None or process_noise_per_day is None)
+        
+        # Set defaults only if NOT auto-tuning and values are None
+        if not auto_tune:
+            if measurement_noise is None:
+                measurement_noise = 400.0
+                print("⚠️  Using default measurement_noise = 400 (auto_tune=False)")
+            if process_noise_per_day is None:
+                process_noise_per_day = 2.0
+                print("⚠️  Using default process_noise_per_day = 2.0 (auto_tune=False)")
+        
+        # Validate non-None parameters
+        if measurement_noise is not None:
+            if not isinstance(measurement_noise, (int, float)) or measurement_noise <= 0:
+                raise ValueError(f"measurement_noise must be a positive number, got {measurement_noise}")
+        
+        if process_noise_per_day is not None:
+            if not isinstance(process_noise_per_day, (int, float)) or process_noise_per_day <= 0:
+                raise ValueError(f"process_noise_per_day must be a positive number, got {process_noise_per_day}")
+        
+        if not isinstance(estimate_drift, bool):
+            raise ValueError(f"estimate_drift must be a boolean, got {estimate_drift}")
+        
+        if fixed_drift is not None and not isinstance(fixed_drift, (int, float)):
+            raise ValueError(f"fixed_drift must be a number or None, got {fixed_drift}")
+        
+        # Print header
+        print("\n" + "="*80)
+        if is_auto_tuning:
+            print("APPLYING KALMAN SMOOTHING WITH AUTO-TUNED PARAMETERS")
+            print("="*80)
+            if measurement_noise is not None:
+                print(f"Fixed measurement_noise: {measurement_noise} (±{np.sqrt(measurement_noise):.1f} kg)")
+            else:
+                print("Estimating measurement_noise from data...")
+            if process_noise_per_day is not None:
+                print(f"Fixed process_noise_per_day: {process_noise_per_day} (±{np.sqrt(process_noise_per_day):.2f} kg/day)")
+            else:
+                print("Estimating process_noise_per_day from data...")
+        else:
+            print("APPLYING KALMAN SMOOTHING WITH USER-SPECIFIED PARAMETERS")
+            print("="*80)
+            print(f"Measurement noise: {measurement_noise} (±{np.sqrt(measurement_noise):.1f} kg CONSTANT)")
+            print(f"Process noise per day: {process_noise_per_day} (±{np.sqrt(process_noise_per_day):.2f} kg/√day)")
+        
+        print(f"Drift estimation: {'Per-cow linear regression' if estimate_drift else f'Fixed at {fixed_drift} kg/day'}")
+        
+        if not is_auto_tuning:
+            print("\nProcess noise scales with time interval:")
+            for days in [7, 14, 28]:
+                variance = process_noise_per_day * days
+                std = np.sqrt(variance)
+                print(f"  {days:2d} days: variance = {variance:6.1f}, std = ±{std:5.2f} kg")
+        
+        print("="*80 + "\n")
+        
+        # Prepare data for smoothing
+        weight_records = []
+        for cow_id, cow_dict in self.objects.items():
+            weight_history = cow_dict['weight_history_data']
+            
+            for idx, entry in enumerate(weight_history.data):
+                weight_records.append({
+                    'cow_id': cow_id,
+                    'date': entry['date'],
+                    'weight': entry['weight'],
+                    'index': idx
+                })
+        
+        # Create DataFrame
+        weight_df = pd.DataFrame(weight_records)
+        weight_df['date'] = pd.to_datetime(weight_df['date'])
+        
+        print(f"Processing {len(weight_df)} weight measurements across {weight_df['cow_id'].nunique()} cows...")
+        
+        # Create smoother - auto-tuning will happen inside filter() if needed
+        smoother = KalmanSmoother(
+            auto_tune=True
+        )
+        
+        # Apply smoothing with proper time handling
+        smoothed_df = smoother.smooth(weight_df, 'weight', 'cow_id', 'date')       
+        smoother.plot_all_entities(smoothed_df, 'weight', 'cow_id', 'date', 
+                           save_path='all_cattle_weights.png')
+
+        # Add smoothed weights back to objects
+        for cow_id, cow_dict in self.objects.items():
+            cow_smoothed = smoothed_df[smoothed_df['cow_id'] == cow_id].copy()
+            cow_smoothed = cow_smoothed.sort_values('date').reset_index(drop=True)
+            
+            # Add smoothed values to weight history
+            weight_history = cow_dict['weight_history_data']
+            for i, entry in enumerate(weight_history.data):
+                if i < len(cow_smoothed):
+                    
+
+                    # RTS smoothed estimate (non-causal - uses future info)
+                    entry['weight_smoothed'] = cow_smoothed.iloc[i]['weight_smoothed']
+                    entry['weight_smoothed_se'] = cow_smoothed.iloc[i]['weight_smoothed_se']
+                    
+                    # Forward-pass filtered estimate (CAUSAL - no future info!)
+                    entry['weight_filtered'] = cow_smoothed.iloc[i]['weight_filtered']
+                    entry['weight_filtered_se'] = cow_smoothed.iloc[i]['weight_filtered_se']
+                    
+                    # Drift rate for this cow
+                    
+                    # Keep original weight unchanged
+                    # entry['weight'] stays as raw measurement
+        
+        print("\n" + "="*80)
+        print("KALMAN SMOOTHING COMPLETE!")
+        print("="*80)
+        print("Added to weight history:")
+        print("  - 'weight_filtered': Forward-pass filtered (CAUSAL - use for prediction!)")
+        print("  - 'weight_filtered_se': Standard error of filtered estimate")
+        print("  - 'weight_smoothed': RTS smoothed (non-causal - visualization only)")
+        print("  - 'weight_smoothed_se': Standard error of smoothed estimate")
+        print("  - 'weight': Original raw measurement (unchanged)")
+        print("\n⚠️  IMPORTANT: Use 'weight_filtered' for prediction to avoid data leakage!")
+        print("="*80 + "\n")
+        
+        return self.objects
+
+
+    def get_dfs(self, n_weighings: list, measurement_noise=None, process_noise_per_day=None,
+                estimate_drift=True, auto_tune=True, apply_smoothing=True, cut_tails=False):
         """
         Generate dataframes with optional Kalman smoothing applied BEFORE feature engineering.
         
         Args:
-            n_weighings: List of prediction horizons
-            measurement_noise: Expected measurement error variance
-            apply_smoothing: If True, applies Kalman smoothing to raw weights first
-            cut_tails: If True, removes bottom and top 2.5% of pred_adgLatest_average
+            n_weighings: List of prediction horizons (e.g., [1, 2, 3])
+            
+            measurement_noise: Measurement error variance. If None and auto_tune=True,
+                              will be estimated from data. Default: None
+            
+            process_noise_per_day: Process noise per day. If None and auto_tune=True,
+                                  will be estimated from data. Default: None
+            
+            estimate_drift: If True, estimates growth rate per cow. Default: True
+            
+            auto_tune: If True, automatically estimates None parameters via MLE. Default: True
+            
+            apply_smoothing: If True, applies Kalman smoothing to raw weights first. Default: True
+            
+            cut_tails: If True, removes bottom and top 2.5% of pred_adgLatest_average. Default: False
+        
+        Returns:
+            dict: Dictionary of DataFrames keyed by n_weighing value
+        
+        Examples:
+            # Full auto-tuning (recommended)
+            dfs = processor.get_dfs([1, 2, 3], auto_tune=True, apply_smoothing=True)
+            
+            # Fix scale error, estimate biological variation
+            dfs = processor.get_dfs(
+                [1, 2, 3],
+                measurement_noise=400,  # Trust your scale
+                auto_tune=True          # Estimate process noise
+            )
+            
+            # Manual parameters
+            dfs = processor.get_dfs(
+                [1, 2, 3],
+                measurement_noise=400,
+                process_noise_per_day=2.0,
+                auto_tune=False
+            )
+            
+            # No smoothing (use raw data)
+            dfs = processor.get_dfs([1, 2, 3], apply_smoothing=False)
         """
         # STEP 0: Load data first if not already loaded
         if self.objects is None:
@@ -526,12 +458,23 @@ class DataProcessing:
        
         # STEP 1: Apply smoothing to raw weight data if requested
         if apply_smoothing:
-            print("\n=== Applying Kalman smoothing to raw weight data ===")
-            self.apply_kalman_smoothing(measurement_noise=measurement_noise)
+            print("\n" + "="*80)
+            print("STEP 1: KALMAN SMOOTHING")
+            print("="*80)
+            self.apply_kalman_smoothing(
+                measurement_noise=measurement_noise,
+                process_noise_per_day=process_noise_per_day,
+                estimate_drift=estimate_drift,
+                auto_tune=auto_tune
+            )
         
         # STEP 2: Generate features (will use smoothed weights if available)
+        print("\n" + "="*80)
+        print("STEP 2: FEATURE ENGINEERING")
+        print("="*80)
+        
         for n in n_weighings:
-            print(f"\n=== Generating features for n={n} ===")
+            print(f"\n--- Generating features for n={n} weighings ahead ---")
             arr = self.get_variables(n, use_smoothed=apply_smoothing)
             df = pd.DataFrame(arr)
             df['pred_date'] = pd.to_datetime(df['pred_date'])
@@ -579,4 +522,211 @@ class DataProcessing:
             
             self.dfs[n] = df
         
+        print("\n" + "="*80)
+        print("DATAFRAME GENERATION COMPLETE")
+        print("="*80)
+        print(f"Generated {len(self.dfs)} dataframes:")
+        for n, df in self.dfs.items():
+            print(f"  n={n}: {len(df)} observations")
+        print("="*80 + "\n")
+        
         return self.dfs
+
+
+    def _process_single_window(self, cow_data, weight_history, feed_history, medical_history, 
+                               x, n_weighing, use_smoothed=True, n_start=2):
+        """
+        Processes a single non-overlapping window for a cow.
+        
+        ⚠️  IMPORTANT: Uses 'weight_filtered' (causal) instead of 'weight_smoothed' 
+                      to avoid data leakage!
+        
+        Args:
+            cow_data: CowData object
+            weight_history: WeightHistoryData object
+            feed_history: FeedHistoryData object
+            medical_history: MedicalHistoryData object
+            x (int): Starting index in weight history
+            n_weighing (int): Number of weighings in this window
+            use_smoothed (bool): If True, use FILTERED weights (not smoothed!)
+            n_start (int): Starting index for processing
+            
+        Returns:
+            dict or None: Dictionary of features, or None if window should be skipped
+        """
+        entry = weight_history.data[x]
+        ret_dict = {}
+        
+        # ===== SUPER PRIMITIVES =====
+        target_weighing = x + n_weighing
+        ret_dict['pred_date'] = weight_history.data[target_weighing]['date']
+
+        ret_dict['date'] = entry['date']
+        ret_dict['startWeight'] = weight_history.data[0]['weight']
+
+        ret_dict['day_diff'] = (datetime.strptime(ret_dict['pred_date'], "%Y-%m-%d") - 
+                               datetime.strptime(ret_dict['date'], "%Y-%m-%d")).days
+        ret_dict['day_diff_2'] = ret_dict['day_diff']**2
+        ret_dict['day_diff_recp'] = ret_dict['day_diff']**2
+      
+        ret_dict['theoritical_error_adg'] = 20/ret_dict['day_diff']
+
+        # ⚠️  CRITICAL: USE FILTERED (CAUSAL) NOT SMOOTHED (NON-CAUSAL)
+        # Filtered = forward pass only = no future information = no data leakage
+        # Smoothed = RTS backward pass = uses future information = DATA LEAKAGE!
+        if use_smoothed and 'weight_filtered' in entry:
+            ret_dict['weight'] = entry['weight_filtered']  # CAUSAL estimate
+            ret_dict['weight_raw'] = entry['weight']  # Original measurement
+            ret_dict['weight_se'] = entry.get('weight_filtered_se', 0)  # Filtered SE
+        else:
+            ret_dict['weight'] = entry['weight']  # Raw measurement
+        
+        ret_dict['cattleId'] = cow_data.cattleId
+        ret_dict['originWeight'] = cow_data.originWeight
+        ret_dict['originWeight_dt'] = cow_data.originWeight/ret_dict['day_diff']
+        ret_dict['hipHeight'] = cow_data.hipHeight
+        ret_dict['breed'] = cow_data.breed
+
+        # Breed indicators
+        ret_dict['isLimousine'] = (ret_dict['breed'] == 'Limousin') or (ret_dict['breed'] == 'Limousine')
+        ret_dict['isSimental'] = (ret_dict['breed'] == 'Simental') or (ret_dict['breed'] == 'Simmental')
+       
+        if ret_dict['breed'] not in ['Limousin', 'Simental', 'Limousine', 'Simmental']:
+            ret_dict['breed'] = 'Other'
+
+        ret_dict['entryWeight'] = cow_data.entryWeight
+        
+        # ===== PROCESS FEED DATA =====
+        feed_processor = FeedProcessor(feed_history, weight_history, x, n_weighing)
+        
+        # Skip if required feeds not present
+        if not feed_processor.has_required_feeds:
+            return None
+        
+        # Get all feed features
+        feed_features = feed_processor.get_all_features()
+        ret_dict.update(feed_features)
+       
+        # ===== TARGET BASICS =====
+        # ⚠️  CRITICAL: USE FILTERED (CAUSAL) FOR TARGET TOO
+        target_entry = weight_history.data[target_weighing]
+        if use_smoothed and 'weight_filtered' in target_entry:
+            ret_dict['pred_weight'] = target_entry['weight_filtered']  # CAUSAL
+            ret_dict['pred_weight_raw'] = target_entry['weight']  # Raw
+            ret_dict['pred_weight_se'] = target_entry.get('weight_filtered_se', 0)
+        else:
+            ret_dict['pred_weight'] = target_entry['weight']
+        
+        # NOW ALL CALCULATIONS USE FILTERED (CAUSAL) WEIGHTS
+        ret_dict['pred_weight_gain'] = ret_dict['pred_weight'] - ret_dict['weight']
+       
+        if use_smoothed and 'weight_filtered' in entry:
+            ret_dict['pred_weight_gain_raw'] = ret_dict['pred_weight_raw'] - ret_dict['weight_raw']
+        
+        ret_dict['pred_adgLatest_average'] = ret_dict['pred_weight_gain'] / ret_dict['day_diff']
+        ret_dict['pred_adgLatest_average_log'] = self.signed_log_transform(ret_dict['pred_adgLatest_average']) 
+        ret_dict['pred_adgLatest_average_2'] = ret_dict['pred_adgLatest_average']**2 
+        ret_dict['pred_adgLatest_average_inverse_hyperbolic'] = (
+            np.log(ret_dict['pred_adgLatest_average'] + 
+                   (ret_dict['pred_adgLatest_average']**2 + 1)**0.5) * 0.5
+        )
+        ret_dict['pred_fcrLatest_average'] = (
+            (ret_dict['pred_weight_gain'] / ret_dict['total_dm_intake']) * 100
+        )
+        
+        # ===== PRIMITIVES (now using filtered weight) =====
+        ret_dict['metabolic_weight'] = (ret_dict['weight']*0.96)**0.75
+        ret_dict['pred_adgLatest_average_mw'] = (
+            (ret_dict['pred_weight_gain'] / ret_dict['day_diff']) * ret_dict['metabolic_weight']
+        )
+        ret_dict['originWeight_mw'] = ret_dict['originWeight'] * ret_dict['metabolic_weight']
+        
+        # Breed-specific metabolic weights
+        for breed_name in ['Simental', 'Limousin', 'Other']:
+            ret_dict[f'metabolic_weight_{breed_name}'] = 0
+            ret_dict[f'metabolic_weight_{breed_name}_mw'] = 0
+        
+        ret_dict[f'metabolic_weight_{ret_dict["breed"]}'] = ret_dict['metabolic_weight']
+        ret_dict[f'metabolic_weight_{ret_dict["breed"]}_mw'] = ret_dict['metabolic_weight']**2
+        
+        # Days on feed
+        ret_dict['daysOnFeedNow'] = (
+            datetime.strptime(ret_dict['date'], "%Y-%m-%d") - 
+            datetime.strptime(cow_data.entryDate, "%Y-%m-%d")
+        ).days
+        ret_dict['daysOnFeedNow_2'] = ret_dict['daysOnFeedNow']**2
+        ret_dict['daysOnFeed_then'] = ret_dict['daysOnFeedNow'] + ret_dict['day_diff']
+        
+        ret_dict['tdn_slobber_daysonfeed'] = ret_dict['tdn_slobber_over_mw_dt']*ret_dict['daysOnFeedNow']
+
+        ret_dict['originWeight_ddmi'] = ret_dict['originWeight'] / ret_dict['avg_dm_intake_per_day']
+        
+        # Breed-specific with ddmi
+        for breed_name in ['Simental', 'Limousin', 'Other']:
+            ret_dict[f'metabolic_weight_{breed_name}_ddmi'] = (
+                ret_dict[f'metabolic_weight_{breed_name}'] / ret_dict['avg_dm_intake_per_day']
+            )
+        
+        ret_dict['mw_per_ddmi'] = ret_dict['metabolic_weight']/ret_dict['avg_dm_intake_per_day']
+        ret_dict['mw_dmi_dt'] = (ret_dict['metabolic_weight']*ret_dict['total_dmi'])/ret_dict['day_diff']
+
+        ret_dict['mw_dmi_dt_dstartweight'] = ret_dict['mw_dmi_dt']/ret_dict['startWeight']
+
+        ret_dict['increase_ratio'] = ret_dict['weight']/ret_dict['startWeight']
+        ret_dict['mw_ratio'] = ret_dict['metabolic_weight']*ret_dict['increase_ratio']
+        ret_dict['mw_ratio_dmi'] = ret_dict['increase_ratio']*ret_dict['total_dmi'] 
+        ret_dict['mw_ratio_dmi_dt'] = ret_dict['mw_ratio_dmi']/ret_dict['day_diff']
+
+        ret_dict['mw_dmi_dt_ratio'] = ret_dict['mw_dmi_dt']*ret_dict['increase_ratio']
+        ret_dict['mw_dmi_dt_ratio_log'] = np.log(ret_dict['mw_dmi_dt']*ret_dict['increase_ratio'])
+
+        ret_dict['mw_dmi_dt_2'] = ret_dict['mw_dmi_dt']**2 
+        ret_dict['day_diff_2_dmi'] = ret_dict['day_diff_2'] * ret_dict['total_dmi']
+        ret_dict['day_diff_dmi'] = ret_dict['day_diff'] * ret_dict['total_dmi']
+        ret_dict['day_diff_dmi_log'] = np.log(ret_dict['day_diff'] * ret_dict['total_dmi'])
+
+        ret_dict['mw_dmi'] = (ret_dict['metabolic_weight']*ret_dict['total_dmi'])
+        
+        if ret_dict['breed'] == 'Other':
+            return None
+
+        # ===== MEDICAL DATA =====
+        if medical_history is not None and medical_history.data is not None:
+            ret_dict['hasBEF'] = medical_history.has_matching_agenda_entry(
+                ret_dict['date'], ret_dict['pred_date'], 'BEF', False, not_contains=['suspected']
+            )
+            ret_dict['gotHNMVaccination'] = medical_history.has_matching_agenda_entry(
+                ret_dict['date'], ret_dict['pred_date'], 'HNM Vaccination', False
+            )
+            ret_dict['gotDewormed'] = medical_history.has_matching_agenda_entry(
+                ret_dict['date'], ret_dict['pred_date'], 'Worm Medication', False
+            )
+            if ret_dict['gotDewormed']:
+                ret_dict['gotWorms'] = False
+            else:
+                ret_dict['gotWorms'] = medical_history.has_matching_agenda_entry(
+                    ret_dict['date'], ret_dict['pred_date'], 'Worm', False
+                )
+            ret_dict['DaysSinceDewormed'] = medical_history.days_since_last_matching_agenda_entry(
+                ret_dict['pred_date'], 'Worm Medication', False
+            )
+        else:
+            ret_dict['hasBEF'] = False
+            ret_dict['gotWorms'] = False
+            ret_dict['gotHNMVaccination'] = False
+            ret_dict['gotDewormed'] = False
+            ret_dict['DaysSinceDewormed'] = 0
+
+        ret_dict['hasBEF_dmi_dt'] = (int(ret_dict['hasBEF'])/ret_dict['day_diff'])*ret_dict['total_dmi']
+        if ret_dict['hasBEF_dmi_dt'] == 0:
+            ret_dict['hasBEF_dmi_dt_log'] = 0
+        else:
+            ret_dict['hasBEF_dmi_dt_log'] = np.log((int(ret_dict['hasBEF'])/ret_dict['day_diff'])*ret_dict['total_dmi'])
+
+        ret_dict['hasBEF_dmi'] = (int(ret_dict['hasBEF']))*ret_dict['total_dmi']
+        ret_dict['hasBEF_dmi_dt_2'] = ret_dict['hasBEF_dmi_dt']**2 
+        ret_dict['hasBEF_ddmi'] = int(ret_dict['hasBEF'])*ret_dict['total_dmi']
+        ret_dict['gotDewormed_dt'] = int(ret_dict['gotDewormed'])/ret_dict['day_diff']
+        ret_dict['DaysSinceDewormed_dt'] = int(ret_dict['DaysSinceDewormed'])/ret_dict['day_diff']
+
+        return ret_dict

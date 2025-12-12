@@ -1,510 +1,635 @@
 import pandas as pd
 import numpy as np
-from statsmodels.tsa.statespace.structural import UnobservedComponents
+from filterpy.kalman import KalmanFilter
 import matplotlib.pyplot as plt
-import warnings
-import os
+from scipy.optimize import minimize, differential_evolution
+from typing import Optional, Tuple, Dict, List
+import logging
 
 
 class KalmanSmoother:
     """
-    Kalman filter/smoother for removing measurement noise from panel data.
+    Simple Kalman smoother to remove measurement errors from cattle weights.
     
-    This class applies Kalman filtering and smoothing to remove measurement noise
-    from observations grouped by entities (e.g., individual cows, patients, machines).
+    Purpose: Clean noisy weight measurements before feeding into regression models.
     
-    It uses a local level model:
-        State equation: true_value_t = true_value_{t-1} + process_noise
-        Observation equation: measured_value_t = true_value_t + measurement_noise
+    Model:
+        - True weight follows a smooth trajectory (your regression will model this)
+        - Observed weight = True weight + measurement_error
+        - measurement_error ~ N(0, σ²) includes: scale error, gut fill, hydration
     
-    Attributes:
-        measurement_noise: Expected measurement error variance (e.g., 20^2 for ±20kg)
-        process_noise: How much true value can change between measurements (auto-estimated if None)
-        entity_results: Dict storing fitted models for each entity
+    This is NOT a growth model - it's a preprocessor to denoise measurements.
+    Your regression model will learn the actual growth patterns from feed, 
+    medical history, breed, etc.
+    
+    Example:
+        >>> # Auto-tune the measurement noise
+        >>> smoother = MeasurementErrorSmoother(auto_tune=True)
+        >>> df_clean = smoother.smooth(df, 'weight', 'cow_id', 'date')
+        >>> 
+        >>> # Use cleaned weights in your regression
+        >>> X = df_clean[['weight_filtered', 'feed_features', ...]]
+        >>> y = df_clean['future_weight']
     """
     
-    def __init__(self, measurement_noise: float = None, process_noise: float = None, 
-                 fix_measurement_noise: bool = False, use_trend: bool = False):
+    def __init__(self,
+                 measurement_noise: Optional[float] = None,
+                 auto_tune: bool = True,
+                 tune_on_first_n: Optional[int] = None,
+                 verbose: bool = True):
         """
-        Initialize the Kalman smoother.
+        Initialize the smoother.
         
         Args:
-            measurement_noise: Expected measurement error variance. 
-                             E.g., if measurements vary ±20kg, use 400 (20^2)
-                             If None, will be estimated from data
-            process_noise: Process noise variance (how much true value drifts).
-                          If None, will be estimated from data (recommended)
-            fix_measurement_noise: If True, measurement_noise is fixed and not estimated.
-                                  Only works if measurement_noise is provided.
-            use_trend: If True, uses local linear trend model (for growing animals).
-                      If False, uses local level model (for stable values).
+            measurement_noise: Total measurement error variance (scale + gut + hydration).
+                             Typical range: 400-600 (±20-25 kg)
+                             If None and auto_tune=True, will be estimated from data.
+            auto_tune: Estimate measurement_noise from data
+            tune_on_first_n: Limit tuning to first N entities (for speed)
+            verbose: Print progress
         """
         self.measurement_noise = measurement_noise
-        self.process_noise = process_noise
-        self.fix_measurement_noise = fix_measurement_noise
-        self.use_trend = use_trend
+        self.auto_tune = auto_tune
+        self.tune_on_first_n = tune_on_first_n
+        self.verbose = verbose
+        
+        self.logger = self._setup_logger()
         self.entity_results = {}
         self.fitted_ = False
+        self.tuning_result_ = None
     
-    def filter(self, df: pd.DataFrame, 
-               target_attr: str,
-               group_attr: str = None,
-               time_attr: str = None,
-               inplace: bool = False,
-               print_results: bool = True
-               ) -> pd.DataFrame:
+    def _setup_logger(self):
+        logger = logging.getLogger('MeasurementErrorSmoother')
+        logger.setLevel(logging.INFO if self.verbose else logging.WARNING)
+        if not logger.handlers:
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter('%(message)s')
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+        return logger
+    
+
+    def smooth(self,
+               df: pd.DataFrame,
+               target_attr: str = 'weight',
+               group_attr: Optional[str] = None,
+               time_attr: Optional[str] = None,
+               return_se: bool = True) -> pd.DataFrame:
         """
-        Apply Kalman filtering/smoothing to remove measurement noise.
+        Smooth noisy measurements to remove measurement errors.
         
         Args:
-            df: DataFrame containing the data
-            target_attr: Name of the column to smooth (e.g., 'weight')
-            group_attr: Name of the grouping column (e.g., 'cow_id'). 
-                       If None, treats all data as one entity
-            time_attr: Name of the time/sequence column (e.g., 'date').
-                      If None, assumes data is already sorted within groups
-            inplace: If True, modifies df in place and returns it. If False, returns a copy.
+            df: Input DataFrame
+            target_attr: Column to smooth (default: 'weight')
+            group_attr: Grouping column (e.g., 'cow_id')
+            time_attr: Time column (e.g., 'date')
+            return_se: If True, also returns standard error columns (default: True)
         
         Returns:
-            DataFrame with added columns:
-                - {target_attr}_filtered: Kalman filtered values
-                - {target_attr}_smoothed: Kalman smoothed values (better estimates)
-                - {target_attr}_smoothed_se: Standard error of smoothed estimates
-        """
-        if inplace:
-            df_result = df
-        else:
-            df_result = df.copy()
+            DataFrame with new columns:
+                - '{target_attr}_filtered': Cleaned weight (causal - use for prediction!)
+                - '{target_attr}_smoothed': Smoother estimate (non-causal - visualization only)
+                - '{target_attr}_filtered_se': Standard error of filtered estimate (if return_se=True)
+                - '{target_attr}_smoothed_se': Standard error of smoothed estimate (if return_se=True)
         
-        # If no grouping, treat as single entity
+        Example:
+            >>> df_clean = smoother.smooth(df, 'weight', 'cow_id', 'date')
+            >>> # Use 'weight_filtered' as input to your regression model
+            >>> X = df_clean[['weight_filtered', 'feed_intake', 'breed', ...]]
+            >>> 
+            >>> # Check uncertainty
+            >>> high_uncertainty = df_clean['weight_filtered_se'] > 10
+            >>> print(f"Found {high_uncertainty.sum()} measurements with high uncertainty")
+        """
+        if time_attr is None:
+            raise ValueError("time_attr required for proper smoothing")
+        
+        df_result = df.copy()
+        
+        # Handle grouping
+        temp_group = False
         if group_attr is None:
-            print("No group_attr specified, treating all data as one entity...")
             df_result['_temp_group'] = 'all'
             group_attr = '_temp_group'
             temp_group = True
-        else:
-            temp_group = False
         
-        # Sort by group and time if time_attr provided
-        if time_attr is not None:
-            df_result = df_result.sort_values([group_attr, time_attr]).reset_index(drop=True)
+        # Sort
+        df_result = df_result.sort_values([group_attr, time_attr]).reset_index(drop=True)
+        
+        # Auto-tune if needed
+        if self.auto_tune and self.measurement_noise is None:
+            self._tune_measurement_noise(df_result, target_attr, group_attr, time_attr)
+        
+        if self.measurement_noise is None:
+            raise ValueError("measurement_noise not set. Set it manually or enable auto_tune=True")
         
         # Initialize output columns
-        filtered_col = f'{target_attr}_filtered'
-        smoothed_col = f'{target_attr}_smoothed'
-        se_col = f'{target_attr}_smoothed_se'
+        df_result[f'{target_attr}_filtered'] = np.nan
+        df_result[f'{target_attr}_smoothed'] = np.nan
         
-        df_result[filtered_col] = np.nan
-        df_result[smoothed_col] = np.nan
-        df_result[se_col] = np.nan
+        if return_se:
+            df_result[f'{target_attr}_filtered_se'] = np.nan
+            df_result[f'{target_attr}_smoothed_se'] = np.nan
         
-        # Get unique entities
-        entities = df_result[group_attr].unique()
-        print(f"Applying Kalman filter to {len(entities)} entities...")
+        # Store return_se flag for processing
+        self._return_se = return_se
         
-        # Process each entity separately
-        for entity in entities:
-            entity_mask = df_result[group_attr] == entity
-            entity_df = df_result[entity_mask].copy()
-            
-            # Extract observations
-            observations = entity_df[target_attr].values
-            
-            # Extract time index if available
-            time_index = None
-            if time_attr is not None:
-                time_index = pd.to_datetime(entity_df[time_attr])
-            
-            # Skip if all NaN
-            if np.all(np.isnan(observations)):
-                print(f"  Entity {entity}: All NaN, skipping...")
-                continue
-            
-            # Skip if too few observations
-            if np.sum(~np.isnan(observations)) < 3:
-                print(f"  Entity {entity}: Too few observations ({np.sum(~np.isnan(observations))}), skipping...")
-                continue
-            
-            try:
-                # Fit Kalman filter/smoother with time information
-                filtered, smoothed, smoothed_se = self._fit_entity(
-                    observations, 
-                    entity_id=entity,
-                    time_index=time_index  # Pass time information!
-                )
-                
-                # Store results
-                df_result.loc[entity_mask, filtered_col] = filtered
-                df_result.loc[entity_mask, smoothed_col] = smoothed
-                df_result.loc[entity_mask, se_col] = smoothed_se
-                
-            except Exception as e:
-                print(f"  Entity {entity}: Failed with error: {e}")
-                continue
+        # Process each entity
+        self._process_all_entities(df_result, target_attr, group_attr, time_attr)
         
-        # Remove temporary group column if created
+        # Clean up
         if temp_group:
             df_result = df_result.drop(columns=['_temp_group'])
         
         self.fitted_ = True
+        self._print_summary()
         
-        # Print summary
-        n_smoothed = df_result[smoothed_col].notna().sum()
-        print(f"\nSuccessfully smoothed {n_smoothed}/{len(df_result)} observations")
-       
-        if print_results == True:
-            self.print_summary()
-
         return df_result
 
-    def print_summary(self):
-        """Print summary of fitted models across all entities."""
-        if not self.fitted_:
-            raise ValueError("Model not fitted. Run filter() first.")
+    def _process_all_entities(self, df, target_attr, group_attr, time_attr):
+        """Process all entities."""
+        entities = df[group_attr].unique()
         
-        if not self.entity_results:
-            print("No entity results stored.")
+        self.logger.info(f"Smoothing {len(entities)} entities...")
+        
+        for idx, entity in enumerate(entities):
+            if self.verbose and (idx + 1) % 10 == 0:
+                self.logger.info(f"  Progress: {idx + 1}/{len(entities)}")
+            
+            entity_mask = df[group_attr] == entity
+            entity_df = df[entity_mask].copy().reset_index(drop=True)
+            
+            obs = entity_df[target_attr].values
+            time_idx = pd.to_datetime(entity_df[time_attr])
+            
+            if np.sum(~np.isnan(obs)) < 2:
+                continue
+            
+            try:
+                # Now returns SE if requested
+                if self._return_se:
+                    filtered, smoothed, filtered_se, smoothed_se = self._smooth_entity(
+                        obs, time_idx, entity, return_se=True
+                    )
+                    df.loc[entity_mask, f'{target_attr}_filtered_se'] = filtered_se
+                    df.loc[entity_mask, f'{target_attr}_smoothed_se'] = smoothed_se
+                else:
+                    filtered, smoothed = self._smooth_entity(
+                        obs, time_idx, entity, return_se=False
+                    )
+                
+                df.loc[entity_mask, f'{target_attr}_filtered'] = filtered
+                df.loc[entity_mask, f'{target_attr}_smoothed'] = smoothed
+                
+            except Exception as e:
+                self.logger.warning(f"Entity {entity} failed: {e}")
+
+    def _smooth_entity(self, observations, time_index, entity_id, return_se=True):
+        """
+        Smooth a single entity's measurements with drift estimation.
+        
+        Model:
+            True weight_t = baseline + drift × t + biological_variation
+            Observed weight_t = True weight_t + measurement_error
+        
+        Args:
+            observations: Array of observations
+            time_index: Time index (pandas datetime)
+            entity_id: Entity identifier
+            return_se: Whether to return standard errors
+        
+        Returns:
+            If return_se=True: (filtered, smoothed, filtered_se, smoothed_se)
+            If return_se=False: (filtered, smoothed)
+        """
+        # ===================================================================
+        # STEP 1: Estimate drift rate (growth rate) from data
+        # ===================================================================
+        valid_mask = ~np.isnan(observations)
+        valid_obs = observations[valid_mask]
+        valid_times = time_index[valid_mask]
+        
+        if len(valid_obs) >= 2:
+            # Convert to days from first observation
+            days = (valid_times - valid_times.iloc[0]).dt.days.values.astype(float)
+            
+            # Linear regression: weight = intercept + drift * days
+            drift_rate, intercept = np.polyfit(days, valid_obs, 1)
+        else:
+            drift_rate = 0.0
+            intercept = valid_obs[0] if len(valid_obs) > 0 else 0.0
+        
+        # ===================================================================
+        # STEP 2: Initialize Kalman filter with control input
+        # ===================================================================
+        kf = KalmanFilter(dim_x=1, dim_z=1)
+        
+        # Initial state
+        first_valid = np.where(~np.isnan(observations))[0][0]
+        kf.x = np.array([[observations[first_valid]]])
+        kf.P = np.array([[self.measurement_noise]])
+        
+        # Observation model: we observe the state directly
+        kf.H = np.array([[1.0]])
+        kf.R = np.array([[self.measurement_noise]])
+        
+        # State transition: identity (constant + drift)
+        kf.F = np.array([[1.0]])
+        kf.B = np.array([[1.0]])  # Control input matrix for drift
+        
+        # Process noise per day (biological variation around growth trend)
+        # This should be much smaller than measurement noise since drift handles growth
+        process_noise_per_day = self.measurement_noise * 0.05  # 5% of measurement noise
+        
+        # ===================================================================
+        # STEP 3: Forward pass (filtering) with time-scaled drift and noise
+        # ===================================================================
+        filtered_states = []
+        filtered_covs = []
+        time_deltas = []
+        prev_time = time_index.iloc[0]
+        
+        for i in range(len(observations)):
+            # Calculate days since last measurement
+            if i > 0:
+                dt = (time_index.iloc[i] - prev_time).days
+                dt = max(dt, 1)  # At least 1 day
+            else:
+                dt = 1
+            
+            time_deltas.append(dt)
+            prev_time = time_index.iloc[i]
+            
+            # Predict with drift and time-scaled process noise
+            if i > 0:
+                # Control input: expected growth over dt days
+                u = np.array([[drift_rate * dt]])
+                
+                # Process noise scales with time interval
+                kf.Q = np.array([[process_noise_per_day * dt]])
+                
+                kf.predict(u=u)
+            
+            # Update with observation (if not NaN)
+            if not np.isnan(observations[i]):
+                kf.update(observations[i])
+            
+            # Store filtered estimate
+            filtered_states.append(float(kf.x[0, 0]))
+            
+            if return_se:
+                filtered_covs.append(float(kf.P[0, 0]))
+        
+        # ===================================================================
+        # STEP 4: Backward pass (RTS smoothing)
+        # ===================================================================
+        if return_se:
+            smoothed_states, smoothed_covs = self._rts_smooth_with_drift(
+                filtered_states, filtered_covs, time_deltas, 
+                drift_rate, process_noise_per_day
+            )
+            
+            # Convert covariances to standard errors
+            filtered_se = np.sqrt(np.array(filtered_covs))
+            smoothed_se = np.sqrt(np.array(smoothed_covs))
+        else:
+            smoothed_states = self._rts_smooth_simple_with_drift(
+                filtered_states, time_deltas, drift_rate, process_noise_per_day
+            )
+        
+        # ===================================================================
+        # STEP 5: Store diagnostics
+        # ===================================================================
+        self.entity_results[entity_id] = {
+            'measurement_noise': self.measurement_noise,
+            'drift_rate': drift_rate,  # kg/day
+            'process_noise_per_day': process_noise_per_day,
+            'n_observations': len(observations),
+            'n_valid': np.sum(~np.isnan(observations)),
+            'mean_change': np.nanmean(np.abs(observations - np.array(filtered_states))),
+            'mean_filtered': np.nanmean(filtered_states),
+            'mean_obs': np.nanmean(valid_obs)
+        }
+        
+        if return_se:
+            return filtered_states, smoothed_states, filtered_se, smoothed_se
+        else:
+            return filtered_states, smoothed_states
+
+
+    def _rts_smooth_with_drift(self, filtered_means, filtered_covs, time_deltas,
+                               drift_rate, process_noise_per_day):
+        """
+        RTS smoother with drift and time-scaled process noise.
+        
+        Args:
+            filtered_means: Forward pass means
+            filtered_covs: Forward pass covariances
+            time_deltas: Time intervals between measurements (days)
+            drift_rate: Estimated growth rate (kg/day)
+            process_noise_per_day: Process noise variance per day
+        
+        Returns:
+            (smoothed_means, smoothed_covs)
+        """
+        n = len(filtered_means)
+        smoothed_means = filtered_means.copy()
+        smoothed_covs = filtered_covs.copy()
+        
+        for i in range(n - 2, -1, -1):
+            # Time interval to next measurement
+            dt = max(time_deltas[i + 1], 1.0) if i + 1 < len(time_deltas) else 1.0
+            
+            # Predicted mean: current + drift over dt
+            predicted_mean = filtered_means[i] + drift_rate * dt
+            
+            # Predicted covariance: current + process noise over dt
+            predicted_cov = filtered_covs[i] + process_noise_per_day * dt
+            
+            # Smoother gain
+            if predicted_cov > 1e-10:
+                C = filtered_covs[i] / predicted_cov
+            else:
+                C = 0.0
+            
+            # Smoothed estimate
+            smoothed_means[i] = (
+                filtered_means[i] + C * (smoothed_means[i + 1] - predicted_mean)
+            )
+            
+            # Smoothed covariance
+            smoothed_covs[i] = (
+                filtered_covs[i] + C**2 * (smoothed_covs[i + 1] - predicted_cov)
+            )
+        
+        return smoothed_means, smoothed_covs
+
+
+    def _rts_smooth_simple_with_drift(self, filtered_means, time_deltas,
+                                      drift_rate, process_noise_per_day):
+        """
+        Simple RTS smoother without covariance tracking (faster).
+        
+        Args:
+            filtered_means: Forward pass means
+            time_deltas: Time intervals between measurements (days)
+            drift_rate: Estimated growth rate (kg/day)
+            process_noise_per_day: Process noise variance per day
+        
+        Returns:
+            smoothed_means
+        """
+        n = len(filtered_means)
+        smoothed = filtered_means.copy()
+        
+        # Use a reasonable fixed gain for simplicity
+        for i in range(n - 2, -1, -1):
+            dt = max(time_deltas[i + 1], 1.0) if i + 1 < len(time_deltas) else 1.0
+            
+            # Predicted mean with drift
+            predicted_mean = filtered_means[i] + drift_rate * dt
+            
+            # Simple gain (approximation)
+            C = 0.5
+            
+            # Smoothed estimate
+            smoothed[i] = filtered_means[i] + C * (smoothed[i + 1] - predicted_mean)
+        
+        return smoothed
+
+    
+    def _tune_measurement_noise(self, df, target_attr, group_attr, time_attr):
+        """Auto-tune measurement noise from data."""
+        import time
+        start = time.time()
+        
+        self.logger.info("="*70)
+        self.logger.info("AUTO-TUNING MEASUREMENT NOISE")
+        self.logger.info("="*70)
+        
+        # Collect data
+        entities = df[group_attr].unique()
+        if self.tune_on_first_n:
+            entities = entities[:self.tune_on_first_n]
+        
+        self.logger.info(f"Analyzing {len(entities)} entities...")
+        
+        # Strategy: Measurement noise shows up as deviations from smooth trend
+        all_second_diffs = []
+        
+        for entity in entities:
+            entity_df = df[df[group_attr] == entity].copy()
+            obs = entity_df[target_attr].values
+            
+            # Remove NaN
+            valid_obs = obs[~np.isnan(obs)]
+            
+            if len(valid_obs) < 3:
+                continue
+            
+            # Second differences remove linear trend
+            # If true weight is linear, second diff = 0 + measurement noise
+            second_diffs = np.diff(valid_obs, n=2)
+            all_second_diffs.extend(second_diffs)
+        
+        all_second_diffs = np.array(all_second_diffs)
+        
+        # Var(X_i - 2*X_{i+1} + X_{i+2}) = Var(ε_i) + 4*Var(ε_{i+1}) + Var(ε_{i+2})
+        # = 6 * σ² if errors are independent
+        measurement_noise = np.var(all_second_diffs) / 6.0
+        measurement_noise = np.clip(measurement_noise, 200.0, 800.0)
+        
+        self.measurement_noise = measurement_noise
+        
+        elapsed = time.time() - start
+        self.logger.info(f"✓ Estimated measurement_noise: {self.measurement_noise:.0f} "
+                        f"(±{np.sqrt(self.measurement_noise):.1f} kg)")
+        self.logger.info(f"  Time: {elapsed:.2f}s")
+        self.logger.info("="*70 + "\n")
+    
+    
+    
+    def _print_summary(self):
+        """Print summary with drift statistics."""
+        if not self.fitted_:
             return
         
-        print("\n" + "=" * 70)
-        print("Kalman Smoother Summary")
-        print("=" * 70)
-        print(f"Number of entities processed: {len(self.entity_results)}")
+        print("\n" + "="*70)
+        print("MEASUREMENT ERROR SMOOTHER - SUMMARY")
+        print("="*70)
+        print(f"Measurement noise: {self.measurement_noise:.0f} (±{np.sqrt(self.measurement_noise):.1f} kg)")
+        print(f"  Includes: scale error + gut fill + hydration")
         
-        # Collect statistics, handling zeros and NaNs
-        obs_vars = [r['sigma2_obs'] for r in self.entity_results.values() if not np.isnan(r['sigma2_obs'])]
-        state_vars = [r['sigma2_state'] for r in self.entity_results.values() if not np.isnan(r['sigma2_state'])]
-        aics = [r['aic'] for r in self.entity_results.values() if not np.isnan(r['aic'])]
+        print(f"\nEntities processed: {len(self.entity_results)}")
         
-        # Filter out zeros from obs_vars to avoid division by zero
-        clean_obs_vars = [v for v in obs_vars if v > 1e-6]
-        clean_state_vars = [s for s, o in zip(state_vars, obs_vars) if o > 1e-6]
+        if self.entity_results:
+            changes = [r['mean_change'] for r in self.entity_results.values()]
+            print(f"Average correction per measurement: ±{np.mean(changes):.1f} kg")
+            
+            # Drift rate statistics
+            drift_rates = [r['drift_rate'] for r in self.entity_results.values()]
+            print(f"\nGrowth Rates (kg/day):")
+            print(f"  Mean:   {np.mean(drift_rates):.3f}")
+            print(f"  Median: {np.median(drift_rates):.3f}")
+            print(f"  Std:    {np.std(drift_rates):.3f}")
+            print(f"  Range:  [{np.min(drift_rates):.3f}, {np.max(drift_rates):.3f}]")
+            
+            # Process noise used
+            process_noise = list(self.entity_results.values())[0]['process_noise_per_day']
+            print(f"\nProcess noise per day: {process_noise:.2f} (±{np.sqrt(process_noise):.2f} kg/day)")
+            print(f"  Biological variation around growth trend")
         
-        print(f"\nMeasurement noise variance (σ²_obs):")
-        print(f"  Mean: {np.mean(obs_vars):.4f}")
-        print(f"  Std:  {np.std(obs_vars):.4f}")
-        print(f"  Min:  {np.min(obs_vars):.4f}")
-        print(f"  Max:  {np.max(obs_vars):.4f}")
-        
-        print(f"\nProcess noise variance (σ²_state):")
-        print(f"  Mean: {np.mean(state_vars):.4f}")
-        print(f"  Std:  {np.std(state_vars):.4f}")
-        print(f"  Min:  {np.min(state_vars):.4f}")
-        print(f"  Max:  {np.max(state_vars):.4f}")
-        
-        print(f"\nSignal-to-noise ratio (σ²_state / σ²_obs):")
-        if clean_obs_vars:
-            snr = [s/o for s, o in zip(clean_state_vars, clean_obs_vars)]
-            median_snr = np.median(snr)
-            print(f"  Median: {median_snr:.4f}")
-            print(f"  25th percentile: {np.percentile(snr, 25):.4f}")
-            print(f"  75th percentile: {np.percentile(snr, 75):.4f}")
-        else:
-            print("  Could not calculate (zero or undefined observation variance)")
-        print(f"  (Higher = more true variation vs noise)")
-        
-        print(f"\nModel fit (AIC):")
-        print(f"  Mean: {np.mean(aics):.2f}")
-        print(f"  Min:  {np.min(aics):.2f}")
-        print(f"  Max:  {np.max(aics):.2f}")
-        print("=" * 70)
+        print("\nOutput columns:")
+        print("  - 'weight_filtered': Denoised weight (CAUSAL - use for prediction)")
+        print("  - 'weight_smoothed': Smoother estimate (NON-CAUSAL - visualization)")
+        print("\n⚠️  Use 'weight_filtered' as input to your regression model!")
+        print("="*70 + "\n")
 
-    def _fit_entity(self, observations, entity_id=None, time_index=None):
-        """
-        Fit Kalman filter/smoother for a single entity.
-        
-        Args:
-            observations: Array of observations (can contain NaN)
-            entity_id: Identifier for this entity (for storing results)
-            time_index: DatetimeIndex for irregular time spacing (IMPORTANT!)
-        
-        Returns:
-            filtered: Filtered state estimates
-            smoothed: Smoothed state estimates
-            smoothed_se: Standard errors of smoothed estimates
-        """
-        # CRITICAL: Convert to pandas Series with DatetimeIndex if time_index provided
-        # This allows statsmodels to handle irregular time spacing automatically
-        if time_index is not None:
-            endog = pd.Series(observations, index=time_index)
-        else:
-            endog = observations
-        
-        # Build the model
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            
-            # Create model with fixed or free parameters
-            if self.fix_measurement_noise and self.measurement_noise is not None:
-                # Fix observation variance, only estimate state variance
-                model = UnobservedComponents(
-                    endog=endog,  # Now includes time information!
-                    level='local linear trend' if self.use_trend else 'local level',
-                    irregular=True,
-                    stochastic_level=True,
-                    stochastic_trend=self.use_trend
-                )
-                
-                # Set starting parameters
-                state_var = self.process_noise if self.process_noise is not None else np.nanvar(observations) * 0.1
-                
-                if self.use_trend:
-                    start_params = [self.measurement_noise, state_var, state_var * 0.1]
-                else:
-                    start_params = [self.measurement_noise, state_var]
-                
-                # Fit with fixed observation variance
-                try:
-                    from scipy.optimize import minimize
-                    
-                    def neg_loglike(params):
-                        """Negative log-likelihood with fixed obs variance."""
-                        if self.use_trend:
-                            full_params = np.array([self.measurement_noise, params[0], params[1]])
-                        else:
-                            full_params = np.array([self.measurement_noise, params[0]])
-                        
-                        model.update(full_params)
-                        return -model.loglike(full_params)
-                    
-                    # Optimize state variance(s)
-                    if self.use_trend:
-                        result = minimize(
-                            neg_loglike,
-                            x0=[state_var, state_var * 0.1],
-                            method='L-BFGS-B',
-                            bounds=[(1e-8, None), (1e-8, None)]
-                        )
-                        optimal_params = result.x
-                        final_params = np.array([self.measurement_noise, optimal_params[0], optimal_params[1]])
-                    else:
-                        result = minimize(
-                            neg_loglike,
-                            x0=[state_var],
-                            method='L-BFGS-B',
-                            bounds=[(1e-8, None)]
-                        )
-                        final_params = np.array([self.measurement_noise, result.x[0]])
-                    
-                    model.update(final_params)
-                    
-                    # Run smoother with final parameters
-                    results = model.smooth(final_params)
-                    
-                    # Add params attribute for consistency
-                    results.params = final_params
-                    n_params = len(final_params)
-                    results.aic = -2 * (-result.fun) + 2 * n_params
-                    results.bic = -2 * (-result.fun) + np.log(len(observations)) * n_params
-                    
-                except Exception as e:
-                    print(f"    Warning: Fixed variance optimization failed: {e}, falling back to standard MLE")
-                    results = model.fit(start_params=start_params, disp=False, maxiter=1000)
-            else:
-                # Standard model - estimate both variances
-                model = UnobservedComponents(
-                    endog=endog,  # Now includes time information!
-                    level='local linear trend' if self.use_trend else 'local level',
-                    irregular=True,
-                    stochastic_level=True,
-                    stochastic_trend=self.use_trend
-                )
-                
-                # Set starting parameters if provided
-                start_params = None
-                if self.measurement_noise is not None or self.process_noise is not None:
-                    obs_var = self.measurement_noise if self.measurement_noise is not None else np.nanvar(observations) * 0.5
-                    state_var = self.process_noise if self.process_noise is not None else np.nanvar(observations) * 0.1
-                    
-                    if self.use_trend:
-                        start_params = [obs_var, state_var, state_var * 0.1]
-                    else:
-                        start_params = [obs_var, state_var]
-                
-                # Fit the model
-                try:
-                    if start_params is not None:
-                        results = model.fit(start_params=start_params, disp=False, maxiter=1000)
-                    else:
-                        results = model.fit(disp=False, maxiter=1000)
-                except:
-                    # If MLE fails, try with simpler method
-                    results = model.fit(method='nm', disp=False, maxiter=500)
-            
-            # Extract results
-            filtered_states = results.filtered_state[0, :]  # Level is first state
-            smoothed_states = results.smoothed_state[0, :]
-            smoothed_state_cov = results.smoothed_state_cov[0, 0, :]  # Variance of level
-            smoothed_se = np.sqrt(smoothed_state_cov)
-            
-            # Store the fitted model
-            if entity_id is not None:
-                sigma2_obs = np.nan
-                sigma2_state = np.nan
-                
-                try:
-                    if len(results.params) >= 2:
-                        sigma2_obs = float(results.params[0])
-                        sigma2_state = float(results.params[1])
-                    elif len(results.params) == 1:
-                        sigma2_obs = float(results.params[0])
-                        sigma2_state = 0.0
-                except Exception as e:
-                    print(f"    Warning: Could not extract variances: {e}")
-                
-                self.entity_results[entity_id] = {
-                    'model': model,
-                    'results': results,
-                    'sigma2_obs': sigma2_obs,
-                    'sigma2_state': sigma2_state,
-                    'aic': float(results.aic) if hasattr(results, 'aic') else np.nan,
-                    'bic': float(results.bic) if hasattr(results, 'bic') else np.nan
-                }
-        
-        return filtered_states, smoothed_states, smoothed_se
     
-    def get_entity_diagnostics(self, entity_id):
-        """
-        Get diagnostics for a specific entity.
-        
-        Args:
-            entity_id: The entity identifier
-        
-        Returns:
-            dict: Dictionary with model diagnostics
-        """
-        if entity_id not in self.entity_results:
-            raise ValueError(f"Entity {entity_id} not found. Did you run filter()?")
-        
-        return self.entity_results[entity_id]
-    
-   
-    def plot_entity(self, df, entity_id, target_attr, group_attr, time_attr=None, 
-                   save=False, save_path=None):
-        """
-        Plot original observations vs smoothed estimates for a specific entity.
-        
-        Args:
-            df: DataFrame with smoothed results
-            entity_id: Entity to plot
-            target_attr: Name of target column
-            group_attr: Name of group column
-            time_attr: Name of time column (optional, uses index if None)
-            save: Whether to save the plot
-            save_path: Path to save plot to
-        """
+    def plot_entity(self, df, entity_id, target_attr, group_attr, time_attr):
+        """Plot results for one entity."""
         entity_df = df[df[group_attr] == entity_id].copy()
         
         if len(entity_df) == 0:
-            raise ValueError(f"Entity {entity_id} not found in dataframe")
+            raise ValueError(f"Entity {entity_id} not found")
         
-        # Get time values
-        if time_attr is not None:
-            time_vals = pd.to_datetime(entity_df[time_attr])
-            xlabel = time_attr
-        else:
-            time_vals = np.arange(len(entity_df))
-            xlabel = 'Index'
-        
-        # Get data
-        observations = entity_df[target_attr].values
+        time_vals = pd.to_datetime(entity_df[time_attr])
+        raw = entity_df[target_attr].values
+        filtered = entity_df[f'{target_attr}_filtered'].values
         smoothed = entity_df[f'{target_attr}_smoothed'].values
-        smoothed_se = entity_df[f'{target_attr}_smoothed_se'].values
         
-        # Plot
-        fig, ax = plt.subplots(figsize=(12, 6))
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
         
-        # Observations
-        ax.scatter(time_vals, observations, alpha=0.5, s=50, 
-                  label='Observations', color='gray', zorder=1)
+        # Top plot: All three
+        ax1.scatter(time_vals, raw, alpha=0.6, s=80, label='Raw (noisy)', 
+                   color='gray', zorder=1, edgecolors='black', linewidths=1.5)
+        ax1.plot(time_vals, filtered, 'b-', linewidth=2.5, 
+                label='Filtered (causal - use for prediction)', zorder=2)
+        ax1.plot(time_vals, smoothed, 'r-', linewidth=2.5, 
+                label='Smoothed (non-causal - visualization)', zorder=3, alpha=0.8)
         
-        # Smoothed estimate
-        ax.plot(time_vals, smoothed, 'r-', linewidth=2, 
-               label='Kalman smoothed', zorder=2)
+        ax1.set_ylabel('Weight (kg)', fontsize=12, fontweight='bold')
+        ax1.set_title(f'Measurement Error Removal: {entity_id}', fontsize=14, fontweight='bold')
+        ax1.legend(loc='best', fontsize=11)
+        ax1.grid(True, alpha=0.3)
         
-        # Confidence interval
-        ax.fill_between(time_vals, 
-                       smoothed - 2*smoothed_se, 
-                       smoothed + 2*smoothed_se,
-                       alpha=0.2, color='red', 
-                       label='95% confidence interval', zorder=0)
+        # Bottom plot: Residuals (what we removed)
+        residuals_filtered = raw - filtered
+        residuals_smoothed = raw - smoothed
         
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(target_attr)
-        ax.set_title(f'Kalman Smoothing for Entity: {entity_id}')
-        ax.legend()
-        ax.grid(True, alpha=0.3)
+        ax2.scatter(time_vals, residuals_filtered, alpha=0.6, s=60, 
+                   label='Noise removed (filtered)', color='blue')
+        ax2.scatter(time_vals, residuals_smoothed, alpha=0.6, s=60, 
+                   label='Noise removed (smoothed)', color='red', marker='x')
+        ax2.axhline(0, color='black', linestyle='--', linewidth=1, alpha=0.5)
+        ax2.axhline(np.sqrt(self.measurement_noise), color='green', 
+                   linestyle=':', linewidth=1, alpha=0.7, 
+                   label=f'Expected noise: ±{np.sqrt(self.measurement_noise):.1f} kg')
+        ax2.axhline(-np.sqrt(self.measurement_noise), color='green', 
+                   linestyle=':', linewidth=1, alpha=0.7)
         
-        # Add diagnostics text
-        if entity_id in self.entity_results:
-            diag = self.entity_results[entity_id]
-            text = f"σ²_obs: {diag['sigma2_obs']:.2f}\n"
-            text += f"σ²_state: {diag['sigma2_state']:.2f}\n"
-            text += f"AIC: {diag['aic']:.1f}"
-            
-            ax.text(0.02, 0.98, text,
-                   transform=ax.transAxes,
-                   verticalalignment='top',
-                   bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+        ax2.set_xlabel('Time', fontsize=12, fontweight='bold')
+        ax2.set_ylabel('Residuals (kg)', fontsize=12, fontweight='bold')
+        ax2.set_title('Measurement Errors Removed', fontsize=13, fontweight='bold')
+        ax2.legend(loc='best', fontsize=10)
+        ax2.grid(True, alpha=0.3)
         
         plt.tight_layout()
-        
-        if save and save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
-            print(f"Plot saved to {save_path}")
-        
-    
-    def plot_comparison(self, df, target_attr, group_attr, time_attr=None, 
-                       max_entities=6, save=False, save_path=None):
+        plt.show()
+
+    def plot_all_entities(self, df, target_attr, group_attr, time_attr, 
+                         max_entities=None, show_raw=True, show_filtered=True, 
+                         show_smoothed=False, save_path=None, alpha=0.3):
         """
-        Plot comparison of original vs smoothed for multiple entities.
+        Plot all entities on the same graph with shared axes.
         
         Args:
             df: DataFrame with smoothed results
-            target_attr: Name of target column
-            group_attr: Name of group column
-            time_attr: Name of time column (optional)
-            max_entities: Maximum number of entities to plot
-            save: Whether to save the plot
-            save_path: Path to save plot to
+            target_attr: Column name for target attribute
+            group_attr: Column name for grouping
+            time_attr: Column name for time
+            max_entities: Maximum number of entities to plot (None = all)
+            show_raw: Show raw observations
+            show_filtered: Show filtered estimates
+            show_smoothed: Show smoothed estimates
+            save_path: Optional path to save the figure
+            alpha: Transparency for lines (default: 0.3)
         """
-        entities = df[group_attr].unique()[:max_entities]
+        entities = df[group_attr].unique()
+        if max_entities is not None:
+            entities = entities[:max_entities]
+        
         n_entities = len(entities)
         
-        fig, axes = plt.subplots(n_entities, 1, figsize=(12, 3*n_entities))
-        if n_entities == 1:
-            axes = [axes]
+        if n_entities == 0:
+            raise ValueError("No entities found in DataFrame")
         
-        for idx, entity_id in enumerate(entities):
-            ax = axes[idx]
-            entity_df = df[df[group_attr] == entity_id].copy()
+        # Create figure
+        fig, ax = plt.subplots(figsize=(16, 8))
+        
+        # Generate colors for entities
+        colors = plt.cm.tab20(np.linspace(0, 1, min(n_entities, 20)))
+        if n_entities > 20:
+            colors = plt.cm.viridis(np.linspace(0, 1, n_entities))
+        
+        # Plot each entity
+        for idx, entity in enumerate(entities):
+            entity_df = df[df[group_attr] == entity].copy().sort_values(time_attr)
             
-            # Get time values
-            if time_attr is not None:
-                time_vals = pd.to_datetime(entity_df[time_attr])
-            else:
-                time_vals = np.arange(len(entity_df))
+            if len(entity_df) == 0:
+                continue
             
-            # Get data
-            observations = entity_df[target_attr].values
-            smoothed = entity_df[f'{target_attr}_smoothed'].values
+            time_vals = pd.to_datetime(entity_df[time_attr])
+            raw = entity_df[target_attr].values
+            color = colors[idx % len(colors)]
             
-            # Plot
-            ax.scatter(time_vals, observations, alpha=0.5, s=30, 
-                      label='Observations', color='gray')
-            ax.plot(time_vals, smoothed, 'r-', linewidth=2, 
-                   label='Smoothed')
+            # Plot raw observations
+            if show_raw:
+                ax.scatter(time_vals, raw, alpha=alpha*2, s=30, 
+                          color=color, zorder=1, edgecolors='none')
             
-            ax.set_ylabel(target_attr)
-            ax.set_title(f'Entity: {entity_id}')
-            ax.legend(loc='upper right')
-            ax.grid(True, alpha=0.3)
+            # Plot filtered
+            if show_filtered and f'{target_attr}_filtered' in entity_df.columns:
+                filtered = entity_df[f'{target_attr}_filtered'].values
+                ax.plot(time_vals, filtered, '-', linewidth=1.5, 
+                       color=color, alpha=alpha, zorder=2)
             
-            if idx == n_entities - 1:
-                ax.set_xlabel(time_attr if time_attr else 'Index')
+            # Plot smoothed
+            if show_smoothed and f'{target_attr}_smoothed' in entity_df.columns:
+                smoothed = entity_df[f'{target_attr}_smoothed'].values
+                ax.plot(time_vals, smoothed, '--', linewidth=1, 
+                       color=color, alpha=alpha*1.5, zorder=3)
+        
+        # Formatting
+        ax.set_xlabel('Date', fontsize=13, fontweight='bold')
+        ax.set_ylabel('Weight (kg)', fontsize=13, fontweight='bold')
+        
+        title = f'All Entities ({n_entities} total)'
+        if show_filtered and show_smoothed:
+            title += ' - Solid: Filtered, Dashed: Smoothed'
+        elif show_filtered:
+            title += ' - Filtered Estimates'
+        elif show_smoothed:
+            title += ' - Smoothed Estimates'
+        
+        ax.set_title(title, fontsize=15, fontweight='bold')
+        ax.grid(True, alpha=0.3)
+        
+        # Add info box
+        info_text = (
+            f"Entities: {n_entities}\n"
+            f"Measurement noise: {self.measurement_noise:.0f} (±{np.sqrt(self.measurement_noise):.1f} kg)\n"
+            f"Total observations: {len(df)}"
+        )
+        ax.text(0.02, 0.98, info_text, transform=ax.transAxes,
+               verticalalignment='top', bbox=dict(boxstyle='round',
+               facecolor='wheat', alpha=0.9, edgecolor='black', linewidth=1.5),
+               fontsize=11, family='monospace')
         
         plt.tight_layout()
         
-        if save and save_path:
+        if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
-            print(f"Plot saved to {save_path}")
+            self.logger.info(f"Plot saved to {save_path}")
+        
+        self.logger.info(f"Plotted {n_entities} entities on shared axes")

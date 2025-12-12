@@ -169,7 +169,7 @@ Examples:
     parser.add_argument(
         '--measurement-noise',
         type=float,
-        default=25,
+        default=None,
         help='Measurement noise for Kalman filter (default: 400)'
     )
     
