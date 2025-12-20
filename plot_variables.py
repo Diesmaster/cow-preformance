@@ -118,7 +118,7 @@ def main():
     dependent_vars = ['pred_adgLatest_average']  # <-- CHANGE THIS
     
     # List of independent variables (x-axis)
-    independent_vars = ['per_pk']  # <-- CHANGE THIS
+    independent_vars = ['weight', 'weight_se']  # <-- CHANGE THIS
     
     # ============================================================
     

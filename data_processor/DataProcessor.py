@@ -1,5 +1,6 @@
 import os
 import json
+import math
 from datetime import datetime
 import pandas as pd
 import numpy as np
@@ -197,7 +198,7 @@ class DataProcessing:
             print(f"cow_id: {cow_data.cattleId}, breed: {cow_data.breed}")
 
 
-            n_start = 0
+            n_start = 1
 
             for x in range(n_start, len(weight_history.data) - n_weighing, n_weighing):
 
@@ -211,10 +212,18 @@ class DataProcessing:
 
                 if window_data is None:
                     continue
+                
+                window_data['tdn_silage_over_mw_daysinfeedlot_dt'] = window_data['tdn_silage_dt']/(window_data['metabolic_weight'])
+                window_data['tdn_rumput_over_mw_daysinfeedlot_dt'] = window_data['tdn_rumput_dt']/(window_data['metabolic_weight'])
+                window_data['tdn_slobber_over_mw_daysinfeedlot_dt'] =window_data['tdn_slobber_dt']/(window_data['metabolic_weight'])
+                window_data['tdn_SP2A_over_mw_daysinfeedlot_dt'] =window_data['tdn_SP2A_dt']/(window_data['metabolic_weight'])
+                window_data['tdn_ricehay_over_mw_daysinfeedlot_dt'] =window_data['tdn_ricehay_dt']/(window_data['metabolic_weight'])
                
-                window_data['tdn_silage_dt_ratio'] = window_data['tdn_silage_dt']/window_data['increase_ratio']
-                window_data['tdn_rumput_dt_ratio'] = window_data['tdn_rumput_dt']/window_data['increase_ratio']
-                window_data['tdn_slobber_dt_ratio'] =window_data['tdn_slobber_dt']/window_data['increase_ratio']
+                window_data['tdn_silage_dt_ratio'] = window_data['tdn_silage_dt']/window_data['exp_increase_ratio']
+                window_data['tdn_rumput_dt_ratio'] = window_data['tdn_rumput_dt']/window_data['exp_increase_ratio']
+                window_data['tdn_slobber_dt_ratio'] =window_data['tdn_slobber_dt']/window_data['exp_increase_ratio']
+                window_data['tdn_SP2A_dt_ratio'] =window_data['tdn_SP2A_dt']/window_data['exp_increase_ratio']
+                window_data['tdn_ricehay_dt_ratio'] =window_data['tdn_ricehay_dt']/window_data['exp_increase_ratio']
                 window_data['cow_id'] = cow_data.cattleId 
                 window_data['time'] = time
                 time += 1
@@ -576,8 +585,9 @@ class DataProcessing:
         # Smoothed = RTS backward pass = uses future information = DATA LEAKAGE!
         if use_smoothed and 'weight_filtered' in entry:
             ret_dict['weight'] = entry['weight_filtered']  # CAUSAL estimate
+            ret_dict['weight_caus'] = entry['weight_filtered']  # CAUSAL estimate
             ret_dict['weight_raw'] = entry['weight']  # Original measurement
-            ret_dict['weight_se'] = entry.get('weight_filtered_se', 0)  # Filtered SE
+            ret_dict['weight_se'] = entry.get('weight_filtered_se', 0)  # Filtered Standard error
         else:
             ret_dict['weight'] = entry['weight']  # Raw measurement
         
@@ -626,6 +636,8 @@ class DataProcessing:
         ret_dict['pred_adgLatest_average'] = ret_dict['pred_weight_gain'] / ret_dict['day_diff']
         ret_dict['pred_adgLatest_average_log'] = self.signed_log_transform(ret_dict['pred_adgLatest_average']) 
         ret_dict['pred_adgLatest_average_2'] = ret_dict['pred_adgLatest_average']**2 
+
+
         ret_dict['pred_adgLatest_average_inverse_hyperbolic'] = (
             np.log(ret_dict['pred_adgLatest_average'] + 
                    (ret_dict['pred_adgLatest_average']**2 + 1)**0.5) * 0.5
@@ -673,12 +685,16 @@ class DataProcessing:
         ret_dict['mw_dmi_dt_dstartweight'] = ret_dict['mw_dmi_dt']/ret_dict['startWeight']
 
         ret_dict['increase_ratio'] = ret_dict['weight']/ret_dict['startWeight']
+        ret_dict['increase_ratio_dt'] = ret_dict['increase_ratio']/ret_dict['day_diff'] 
+        ret_dict['ln_increase_ratio_dt'] = math.log(ret_dict['increase_ratio'])/ret_dict['day_diff'] 
+        ret_dict['exp_increase_ratio'] = math.exp(ret_dict['weight']/ret_dict['startWeight'])
         ret_dict['mw_ratio'] = ret_dict['metabolic_weight']*ret_dict['increase_ratio']
         ret_dict['mw_ratio_dmi'] = ret_dict['increase_ratio']*ret_dict['total_dmi'] 
         ret_dict['mw_ratio_dmi_dt'] = ret_dict['mw_ratio_dmi']/ret_dict['day_diff']
 
         ret_dict['mw_dmi_dt_ratio'] = ret_dict['mw_dmi_dt']*ret_dict['increase_ratio']
-        ret_dict['mw_dmi_dt_ratio_log'] = np.log(ret_dict['mw_dmi_dt']*ret_dict['increase_ratio'])
+        ret_dict['ln_mw_dmi_dt_ratio'] = np.log(ret_dict['mw_dmi_dt']*ret_dict['increase_ratio'])
+        ret_dict['ln_mw_dmi_dt_ratio_2'] = (np.log(ret_dict['mw_dmi_dt']*ret_dict['increase_ratio']))**2
 
         ret_dict['mw_dmi_dt_2'] = ret_dict['mw_dmi_dt']**2 
         ret_dict['day_diff_2_dmi'] = ret_dict['day_diff_2'] * ret_dict['total_dmi']
@@ -701,6 +717,9 @@ class DataProcessing:
             ret_dict['gotDewormed'] = medical_history.has_matching_agenda_entry(
                 ret_dict['date'], ret_dict['pred_date'], 'Worm Medication', False
             )
+            ret_dict['gotAppetiteBoost'] = medical_history.has_matching_agenda_entry(
+                ret_dict['date'], ret_dict['pred_date'], 'Appetite Boost', False
+            )
             if ret_dict['gotDewormed']:
                 ret_dict['gotWorms'] = False
             else:
@@ -711,13 +730,22 @@ class DataProcessing:
                 ret_dict['pred_date'], 'Worm Medication', False
             )
         else:
-            ret_dict['hasBEF'] = False
+            ret_dict['gotAppetiteBoost'] = False 
+            ret_dict['hasBEF'] = False 
             ret_dict['gotWorms'] = False
             ret_dict['gotHNMVaccination'] = False
             ret_dict['gotDewormed'] = False
             ret_dict['DaysSinceDewormed'] = 0
 
         ret_dict['hasBEF_dmi_dt'] = (int(ret_dict['hasBEF'])/ret_dict['day_diff'])*ret_dict['total_dmi']
+        ret_dict['hasBEF_dt'] = (int(ret_dict['hasBEF'])/ret_dict['day_diff'])
+        ret_dict['gotAppetiteBoost_dmi_dt'] = (int(ret_dict['gotAppetiteBoost'])/ret_dict['day_diff'])*ret_dict['total_dmi']
+        ret_dict['gotHNMVaccination_dmi_dt'] = (int(ret_dict['gotHNMVaccination'])/ret_dict['day_diff'])*ret_dict['total_dmi']
+        ret_dict['gotHNMVaccination_dt'] = (int(ret_dict['gotHNMVaccination'])/ret_dict['day_diff'])
+        ret_dict['gotAppetiteBoost_dt'] = (int(ret_dict['gotAppetiteBoost'])/ret_dict['day_diff'])
+
+
+
         if ret_dict['hasBEF_dmi_dt'] == 0:
             ret_dict['hasBEF_dmi_dt_log'] = 0
         else:
@@ -728,5 +756,24 @@ class DataProcessing:
         ret_dict['hasBEF_ddmi'] = int(ret_dict['hasBEF'])*ret_dict['total_dmi']
         ret_dict['gotDewormed_dt'] = int(ret_dict['gotDewormed'])/ret_dict['day_diff']
         ret_dict['DaysSinceDewormed_dt'] = int(ret_dict['DaysSinceDewormed'])/ret_dict['day_diff']
+
+
+        if ret_dict.get('pred_adgLatest_average') is not None and ret_dict['pred_adgLatest_average'] > 1.5 or ret_dict['pred_adgLatest_average'] < 0.6:
+            with open('check.txt', 'a', encoding='utf-8') as f:
+                f.write(json.dumps(ret_dict, indent=2))
+                f.write('\n' + '-' * 80 + '\n')
+
+
+        if ret_dict['pred_adgLatest_average'] < 0.6:
+            pass
+            #if not medical_history == None:
+                #res = medical_history.get_matching_agenda_entry(
+                #    ret_dict['date'], ret_dict['pred_date'], '', False
+                #)
+                
+                #for entry in res:
+                #    print(entry['agenda'])
+
+            #print(ret_dict)
 
         return ret_dict

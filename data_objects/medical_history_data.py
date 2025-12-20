@@ -85,6 +85,46 @@ class MedicalHistoryData:
         else:
             raise ValueError("Invalid date position for new entry.")
 
+    def get_matching_agenda_entry(self, start_date, end_date, query_string, exact_match, not_contains=None):
+        """
+        Checks if there is at least one medical history entry within the given date range
+        whose 'agenda' field matches the provided string criteria.
+
+        Args:
+            start_date (str): The start date in 'YYYY-MM-DD' format.
+            end_date (str): The end date in 'YYYY-MM-DD' format.
+            query_string (str): The string to compare against the 'agenda' field.
+            exact_match (bool): If True, an exact match is required; if False, a case-insensitive
+                                substring match is used.
+
+        Returns:
+            bool: True if a matching entry is found; False otherwise.
+        """
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
+       
+        not_contains = []
+
+        entries = []
+
+        for entry in self.data:
+            try:
+                entry_date_obj = datetime.strptime(entry.get('date', ''), '%Y-%m-%d')
+            except Exception:
+                continue  # Skip entries with invalid or missing date formats
+
+            if start_date_obj <= entry_date_obj <= end_date_obj:
+                agenda = entry.get('agenda', '')
+                if exact_match:
+                    if agenda == query_string:
+                        entries.append(entry)
+                else:
+                    if query_string.lower() in agenda.lower():
+                        if not any(excl.lower() in agenda.lower() for excl in not_contains):
+                            entries.append(entry) 
+        return entries 
+
+
     def has_matching_agenda_entry(self, start_date, end_date, query_string, exact_match, not_contains=None):
         """
         Checks if there is at least one medical history entry within the given date range

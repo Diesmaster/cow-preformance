@@ -25,16 +25,17 @@ models = {
         },   
         'limousine_book_adg_1_final':
         {
-            'pass':False,
+            'pass':True,
             'depended_attr': 'pred_adgLatest_average', 
-            'indpended_attr':   [  'mw_dmi_dt_ratio',  'tdn_silage_dt', 'tdn_rumput_dt', 'tdn_slobber_dt', 'tdn_SP2A_dt', 'tdn_ricehay_dt', 'day_diff_dmi']
+            'indpended_attr':   [  'mw_dmi_dt_ratio', 'tdn_silage_dt', 'tdn_rumput_dt', 'tdn_slobber_dt', 'tdn_SP2A_dt', 'day_diff_dmi']
         },
          'simental_book_adg_1_final':
         {
-            'pass':False,
+            'pass':True,
             'depended_attr': 'pred_adgLatest_average', 
             'indpended_attr':   [  'mw_dmi_dt_ratio',  'tdn_silage_dt', 'tdn_rumput_dt', 'tdn_slobber_dt', 'tdn_SP2A_dt', 'tdn_ricehay_dt', 'day_diff_dmi']
-        },       'limousine_book_adg_1_final_log':
+        },       
+        'limousine_book_adg_1_final_log':
         {
             'pass':True,
             'depended_attr': 'pred_adgLatest_average_log', 
@@ -44,7 +45,7 @@ models = {
         {
             'pass':True,
             'depended_attr': 'pred_fcrLatest_average', 
-            'indpended_attr':   [ 'hasBEF', 'mw_ratio', 'tdn_silage_ddmi', 'tdn_rumput_ddmi', 'tdn_slobber_ddmi', 'day_diff_2' ]
+            'indpended_attr':   [ 'hasBEF_dt', 'gotDewormed_dt',  'gotAppetiteBoost_dt', 'mw_ratio', 'tdn_silage_ddmi', 'tdn_rumput_ddmi', 'tdn_slobber_ddmi', 'FeedRatio_squared', 'day_diff_2' ]
         },
     'limousine_book_wg_1_final':
         {
@@ -54,15 +55,27 @@ models = {
         },
     'limousine_book_adg_1_root_dmi':
         {
+            'pass':False,
+            'depended_attr': 'pred_adgLatest_average', 
+            'indpended_attr':   [ 'hasBEF_dmi_dt', 'gotAppetiteBoost_dmi_dt', 'gotDewormed_dt', 'gotHNMVaccination_dmi_dt', 'mw_dmi_dt_ratio',  'tdn_silage_dt_r_dmi', 'tdn_rumput_dt_r_dmi', 'tdn_slobber_dt_r_dmi', 'tdn_SP2A_dt_r_dmi', 'tdn_rumput_log', 'FeedRatio_squared', 'day_diff_dmi']
+        },
+    'simental_book_adg_1_root_dmi':
+        {
             'pass':True,
             'depended_attr': 'pred_adgLatest_average', 
-            'indpended_attr':   [ 'hasBEF_dmi_dt', 'mw_dmi_dt_ratio',  'tdn_silage_dt_r_dmi', 'tdn_rumput_dt_r_dmi', 'tdn_slobber_dt_r_dmi', 'day_diff_dmi']
+            'indpended_attr':   [ 'hasBEF_dmi_dt', 'mw_dmi_dt_ratio',  'tdn_silage_dt_r_dmi', 'tdn_rumput_dt_r_dmi_mw', 'tdn_slobber_dt_r_dmi_mw', 'tdn_SP2A_dt_r_dmi_mw', 'tdn_ricehay_dt_r_dmi_mw','day_diff_dmi']
         },
     'limousine_book_adg_1_final_mw':
         {
             'pass':True,
             'depended_attr': 'pred_adgLatest_average', 
-            'indpended_attr':   [ 'hasBEF_dmi_dt', 'mw_dmi_dt_ratio',  'tdn_silage_over_mw_dt', 'tdn_rumput_over_mw_dt', 'tdn_slobber_over_mw_dt', 'day_diff_dmi']
+            'indpended_attr':   [ 'hasBEF_dmi_dt', 'mw_dmi_dt_ratio',  'tdn_silage_over_mw_dt', 'tdn_rumput_over_mw_dt', 'tdn_slobber_over_mw_dt', 'tdn_SP2A_over_mw_dt','tdn_ricehay_over_mw_dt','day_diff_dmi']
+        },
+    'simental_book_adg_1_final_mw':
+        {
+            'pass':True,
+            'depended_attr': 'pred_adgLatest_average', 
+            'indpended_attr':   [ 'hasBEF_dmi_dt', 'mw_dmi_dt_ratio',  'tdn_silage_over_mw_dt', 'tdn_rumput_over_mw_dt', 'tdn_slobber_over_mw_dt', 'tdn_SP2A_over_mw_dt','tdn_ricehay_over_mw_dt','day_diff_dmi']
         },
     'limousine_book_adg_1_final_total_tdn_2_3':
         {

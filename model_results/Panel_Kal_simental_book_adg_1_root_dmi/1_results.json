@@ -1,0 +1,71 @@
+{
+  "title": "Panel_Kal_simental_book_adg_1_root_dmi",
+  "n": 1,
+  "group_col": "cow_id",
+  "time_col": "pred_date",
+  "entity_effects": true,
+  "time_effects": false,
+  "independent_variables": [
+    "hasBEF_dmi_dt",
+    "mw_dmi_dt_ratio",
+    "tdn_silage_dt_r_dmi",
+    "tdn_rumput_dt_r_dmi_mw",
+    "tdn_slobber_dt_r_dmi_mw",
+    "tdn_SP2A_dt_r_dmi_mw",
+    "tdn_ricehay_dt_r_dmi_mw",
+    "day_diff_dmi"
+  ],
+  "dependent_variable": "pred_adgLatest_average",
+  "summary": {
+    "r2": 0.32410716769010217,
+    "r2_within": 0.32410716769010217,
+    "r2_between": -30.815680399844208,
+    "r2_overall": -4.917477802970239,
+    "f_statistic": 3.296730888910807,
+    "f_pvalue": 0.003822609157087764,
+    "n_entities": 11,
+    "n_obs": 74,
+    "mean_fixed_effect": 0.5556121756844936
+  },
+  "coefficients": {
+    "hasBEF_dmi_dt": -0.02672776825251386,
+    "mw_dmi_dt_ratio": -0.0005693474437226687,
+    "tdn_silage_dt_r_dmi": 0.005976375125983587,
+    "tdn_rumput_dt_r_dmi_mw": 0.5902169250339295,
+    "tdn_slobber_dt_r_dmi_mw": 0.3482916527418308,
+    "tdn_SP2A_dt_r_dmi_mw": 0.5818655109212896,
+    "tdn_ricehay_dt_r_dmi_mw": -6.933067264692149,
+    "day_diff_dmi": -0.0009938881284756733
+  },
+  "std_errors": {
+    "hasBEF_dmi_dt": 0.001607785081476953,
+    "mw_dmi_dt_ratio": 4.18273852022734e-05,
+    "tdn_silage_dt_r_dmi": 0.0014930462102000167,
+    "tdn_rumput_dt_r_dmi_mw": 0.3048032231475654,
+    "tdn_slobber_dt_r_dmi_mw": 0.044764279097991855,
+    "tdn_SP2A_dt_r_dmi_mw": 0.11092240439736573,
+    "tdn_ricehay_dt_r_dmi_mw": 1.4438182188071393,
+    "day_diff_dmi": 0.00016574891645409028
+  },
+  "pvalues": {
+    "hasBEF_dmi_dt": 0.0,
+    "mw_dmi_dt_ratio": 0.0,
+    "tdn_silage_dt_r_dmi": 0.00018904651988949084,
+    "tdn_rumput_dt_r_dmi_mw": 0.05796531965276697,
+    "tdn_slobber_dt_r_dmi_mw": 1.9887202995505504e-10,
+    "tdn_SP2A_dt_r_dmi_mw": 2.565164447076995e-06,
+    "tdn_ricehay_dt_r_dmi_mw": 1.2485739475431856e-05,
+    "day_diff_dmi": 1.6308648942420234e-07
+  },
+  "diagnostics": {
+    "residual_normality": {
+      "anderson_darling_stat": 0.6400507366948887,
+      "pvalue": 0.09152858043644932
+    },
+    "durbin_watson": 1.9237835669434518,
+    "n_entities": 11,
+    "n_obs": 74,
+    "mean_fixed_effect": 0.5556121756844936
+  },
+  "cross_validation": null
+}

@@ -7,57 +7,81 @@
   "time_effects": false,
   "independent_variables": [
     "hasBEF_dmi_dt",
+    "gotAppetiteBoost_dmi_dt",
+    "gotDewormed_dt",
+    "gotHNMVaccination_dmi_dt",
     "mw_dmi_dt_ratio",
     "tdn_silage_dt_r_dmi",
     "tdn_rumput_dt_r_dmi",
     "tdn_slobber_dt_r_dmi",
+    "tdn_SP2A_dt_r_dmi",
+    "tdn_rumput_log",
+    "FeedRatio_squared",
     "day_diff_dmi"
   ],
   "dependent_variable": "pred_adgLatest_average",
   "summary": {
-    "r2": 0.3673859737301911,
-    "r2_within": 0.3673859737301911,
-    "r2_between": -9.0926665642643,
-    "r2_overall": -5.88570355078628,
-    "f_statistic": 21.5842701183093,
-    "f_pvalue": 1.1102230246251565e-16,
-    "n_entities": 16,
-    "n_obs": 245,
-    "mean_fixed_effect": 0.9080307704139419
+    "r2": 0.2686911606841986,
+    "r2_within": 0.2686911606841986,
+    "r2_between": -1.288813483922425,
+    "r2_overall": -0.6839765532478588,
+    "f_statistic": 7.80749097724717,
+    "f_pvalue": 2.3189228315345645e-12,
+    "n_entities": 22,
+    "n_obs": 289,
+    "mean_fixed_effect": 0.7401670849118502
   },
   "coefficients": {
-    "hasBEF_dmi_dt": -0.037394119076348875,
-    "mw_dmi_dt_ratio": -0.00045560132433868544,
-    "tdn_silage_dt_r_dmi": 29.690829815849455,
-    "tdn_rumput_dt_r_dmi": 41.87976574418842,
-    "tdn_slobber_dt_r_dmi": 26.70040674877147,
-    "day_diff_dmi": 0.0007912325494430661
+    "hasBEF_dmi_dt": -0.05920906494829964,
+    "gotAppetiteBoost_dmi_dt": -0.07028442160706716,
+    "gotDewormed_dt": -3.4776176412001503,
+    "gotHNMVaccination_dmi_dt": -0.017628744959256776,
+    "mw_dmi_dt_ratio": -0.0007716200529867444,
+    "tdn_silage_dt_r_dmi": 0.004654949467307,
+    "tdn_rumput_dt_r_dmi": -5.963410851397085e-05,
+    "tdn_slobber_dt_r_dmi": 0.002869761838516412,
+    "tdn_SP2A_dt_r_dmi": -0.0027818313489715806,
+    "tdn_rumput_log": 0.3627922951218978,
+    "FeedRatio_squared": -0.29088128543685404,
+    "day_diff_dmi": -0.0006053539066304951
   },
   "std_errors": {
-    "hasBEF_dmi_dt": 0.015290122371688693,
-    "mw_dmi_dt_ratio": 9.985338090673544e-05,
-    "tdn_silage_dt_r_dmi": 7.850512305550732,
-    "tdn_rumput_dt_r_dmi": 9.74131730974275,
-    "tdn_slobber_dt_r_dmi": 7.682956949232937,
-    "day_diff_dmi": 0.00027689228629623194
+    "hasBEF_dmi_dt": 0.024014694790034704,
+    "gotAppetiteBoost_dmi_dt": 0.026384901228308145,
+    "gotDewormed_dt": 1.0826203377615924,
+    "gotHNMVaccination_dmi_dt": 0.011933425674347202,
+    "mw_dmi_dt_ratio": 0.00011880219613250177,
+    "tdn_silage_dt_r_dmi": 0.0012713879446237099,
+    "tdn_rumput_dt_r_dmi": 0.002919661618377954,
+    "tdn_slobber_dt_r_dmi": 0.0005531429683000089,
+    "tdn_SP2A_dt_r_dmi": 0.0024815931771667004,
+    "tdn_rumput_log": 0.13790481567314616,
+    "FeedRatio_squared": 0.11928325758970194,
+    "day_diff_dmi": 0.00012589909148199565
   },
   "pvalues": {
-    "hasBEF_dmi_dt": 0.015234409196235532,
-    "mw_dmi_dt_ratio": 8.33778321362999e-06,
-    "tdn_silage_dt_r_dmi": 0.00019981701515758843,
-    "tdn_rumput_dt_r_dmi": 2.5627039893949544e-05,
-    "tdn_slobber_dt_r_dmi": 0.0006131518433245553,
-    "day_diff_dmi": 0.004673300829129978
+    "hasBEF_dmi_dt": 0.014340040063182347,
+    "gotAppetiteBoost_dmi_dt": 0.00821826989458696,
+    "gotDewormed_dt": 0.0014864554677482822,
+    "gotHNMVaccination_dmi_dt": 0.14084052382819867,
+    "mw_dmi_dt_ratio": 4.3196135557366233e-10,
+    "tdn_silage_dt_r_dmi": 0.0003050284890213639,
+    "tdn_rumput_dt_r_dmi": 0.9837203081492782,
+    "tdn_slobber_dt_r_dmi": 4.335790373399817e-07,
+    "tdn_SP2A_dt_r_dmi": 0.26334836550060614,
+    "tdn_rumput_log": 0.009038430970304434,
+    "FeedRatio_squared": 0.015428364492332536,
+    "day_diff_dmi": 2.605015783530007e-06
   },
   "diagnostics": {
     "residual_normality": {
-      "anderson_darling_stat": 9.7951897295778,
-      "pvalue": 9.558107686786807e-24
+      "anderson_darling_stat": 1.0849089738790099,
+      "pvalue": 0.0074893126882373045
     },
-    "durbin_watson": 1.8992193810415483,
-    "n_entities": 16,
-    "n_obs": 245,
-    "mean_fixed_effect": 0.9080307704139419
+    "durbin_watson": 1.8597046697882191,
+    "n_entities": 22,
+    "n_obs": 289,
+    "mean_fixed_effect": 0.7401670849118502
   },
   "cross_validation": null
 }
