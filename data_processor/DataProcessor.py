@@ -667,6 +667,7 @@ class DataProcessing:
             datetime.strptime(cow_data.entryDate, "%Y-%m-%d")
         ).days
         ret_dict['daysOnFeedNow_2'] = ret_dict['daysOnFeedNow']**2
+        ret_dict['daysOnFeedNow_r'] = ret_dict['daysOnFeedNow']**(1/2)
         ret_dict['daysOnFeed_then'] = ret_dict['daysOnFeedNow'] + ret_dict['day_diff']
         
         ret_dict['tdn_slobber_daysonfeed'] = ret_dict['tdn_slobber_over_mw_dt']*ret_dict['daysOnFeedNow']
@@ -685,14 +686,25 @@ class DataProcessing:
         ret_dict['mw_dmi_dt_dstartweight'] = ret_dict['mw_dmi_dt']/ret_dict['startWeight']
 
         ret_dict['increase_ratio'] = ret_dict['weight']/ret_dict['startWeight']
+        ret_dict['increase_ratio_r'] = (ret_dict['weight']/ret_dict['startWeight'])**(1/2)
         ret_dict['increase_ratio_dt'] = ret_dict['increase_ratio']/ret_dict['day_diff'] 
+        ret_dict['increase_ratio_dt_r'] = (ret_dict['increase_ratio']/ret_dict['day_diff'])**(1/2) 
+        ret_dict['increase_ratio_dt_dmi'] = (ret_dict['increase_ratio']/ret_dict['day_diff'])*ret_dict['total_dmi'] 
+        ret_dict['increase_ratio_dt_r_dmi'] = (ret_dict['increase_ratio']/ret_dict['day_diff'])**(1/2)*ret_dict['total_dmi']
         ret_dict['ln_increase_ratio_dt'] = math.log(ret_dict['increase_ratio'])/ret_dict['day_diff'] 
         ret_dict['exp_increase_ratio'] = math.exp(ret_dict['weight']/ret_dict['startWeight'])
         ret_dict['mw_ratio'] = ret_dict['metabolic_weight']*ret_dict['increase_ratio']
         ret_dict['mw_ratio_dmi'] = ret_dict['increase_ratio']*ret_dict['total_dmi'] 
         ret_dict['mw_ratio_dmi_dt'] = ret_dict['mw_ratio_dmi']/ret_dict['day_diff']
+        ret_dict['tdn_silage_dt_r_dmi_mw']= ret_dict['tdn_silage_dt_r_dmi_mw']/ret_dict['increase_ratio']
+        ret_dict['tdn_rumput_dt_r_dmi_mw']= ret_dict['tdn_rumput_dt_r_dmi_mw']/ret_dict['increase_ratio']
+        ret_dict['tdn_slobber_dt_r_dmi_mw']= ret_dict['tdn_slobber_dt_r_dmi_mw']/ret_dict['increase_ratio']
+        ret_dict['tdn_SP2A_dt_r_dmi_mw']= ret_dict['tdn_SP2A_dt_r_dmi_mw']/ret_dict['increase_ratio']
+        ret_dict['tdn_ricehay_dt_r_dmi_mw']= ret_dict['tdn_silage_dt_r_dmi_mw']/ret_dict['increase_ratio']
+
 
         ret_dict['mw_dmi_dt_ratio'] = ret_dict['mw_dmi_dt']*ret_dict['increase_ratio']
+        ret_dict['mw_dmi_dt_ratio_2'] = (ret_dict['mw_dmi_dt']*ret_dict['increase_ratio'])**2
         ret_dict['ln_mw_dmi_dt_ratio'] = np.log(ret_dict['mw_dmi_dt']*ret_dict['increase_ratio'])
         ret_dict['ln_mw_dmi_dt_ratio_2'] = (np.log(ret_dict['mw_dmi_dt']*ret_dict['increase_ratio']))**2
 
@@ -738,6 +750,7 @@ class DataProcessing:
             ret_dict['DaysSinceDewormed'] = 0
 
         ret_dict['hasBEF_dmi_dt'] = (int(ret_dict['hasBEF'])/ret_dict['day_diff'])*ret_dict['total_dmi']
+        ret_dict['gotDewormed_dmi_dt'] = (int(ret_dict['gotDewormed'])/ret_dict['day_diff'])*ret_dict['total_dmi']
         ret_dict['hasBEF_dt'] = (int(ret_dict['hasBEF'])/ret_dict['day_diff'])
         ret_dict['gotAppetiteBoost_dmi_dt'] = (int(ret_dict['gotAppetiteBoost'])/ret_dict['day_diff'])*ret_dict['total_dmi']
         ret_dict['gotHNMVaccination_dmi_dt'] = (int(ret_dict['gotHNMVaccination'])/ret_dict['day_diff'])*ret_dict['total_dmi']

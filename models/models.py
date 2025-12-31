@@ -27,13 +27,13 @@ models = {
         {
             'pass':True,
             'depended_attr': 'pred_adgLatest_average', 
-            'indpended_attr':   [  'mw_dmi_dt_ratio', 'tdn_silage_dt', 'tdn_rumput_dt', 'tdn_slobber_dt', 'tdn_SP2A_dt', 'day_diff_dmi']
+            'indpended_attr':   [ 'hasBEF_dmi_dt', 'gotAppetiteBoost_dmi_dt', 'gotDewormed_dmi_dt', 'gotHNMVaccination_dmi_dt', 'mw_dmi_dt_ratio', 'tdn_silage_dt', 'tdn_rumput_dt', 'tdn_slobber_dt', 'tdn_SP2A_dt', 'day_diff_dmi']
         },
          'simental_book_adg_1_final':
         {
             'pass':True,
             'depended_attr': 'pred_adgLatest_average', 
-            'indpended_attr':   [  'mw_dmi_dt_ratio',  'tdn_silage_dt', 'tdn_rumput_dt', 'tdn_slobber_dt', 'tdn_SP2A_dt', 'tdn_ricehay_dt', 'day_diff_dmi']
+            'indpended_attr':   [  'hasBEF_dmi_dt', 'gotAppetiteBoost_dmi_dt', 'gotDewormed_dmi_dt', 'gotHNMVaccination_dmi_dt', 'mw_dmi_dt_ratio','mw_dmi_dt_ratio_2', 'tdn_silage_dt', 'tdn_rumput_dt', 'tdn_slobber_dt', 'tdn_SP2A_dt', 'tdn_ricehay_dt', 'day_diff_dmi']
         },       
         'limousine_book_adg_1_final_log':
         {
@@ -57,11 +57,31 @@ models = {
         {
             'pass':False,
             'depended_attr': 'pred_adgLatest_average', 
-            'indpended_attr':   [ 'hasBEF_dmi_dt', 'gotAppetiteBoost_dmi_dt', 'gotDewormed_dt', 'gotHNMVaccination_dmi_dt', 'mw_dmi_dt_ratio',  'tdn_silage_dt_r_dmi', 'tdn_rumput_dt_r_dmi', 'tdn_slobber_dt_r_dmi', 'tdn_SP2A_dt_r_dmi', 'tdn_rumput_log', 'FeedRatio_squared', 'day_diff_dmi']
+            'indpended_attr':   [ 'hasBEF_dmi_dt', 'gotAppetiteBoost_dmi_dt', 'gotDewormed_dmi_dt', 'gotHNMVaccination_dmi_dt', 'weight_ddmi', 'total_tdn_3_dt_dmi', 'daysOnFeedNow_r', 'mw_dmi_dt_ratio', 'tdn_silage_dt_r_dmi', 'tdn_concentrats_dt_r_dmi', 'tdn_rumput_log_r_dmi',  'day_diff_dmi']
         },
-    'simental_book_adg_1_root_dmi':
+    'limousine_naive_2_adg_1':
         {
             'pass':True,
+            'depended_attr': 'pred_adgLatest_average', 
+            'indpended_attr':   [ 'hasBEF_dmi_dt', 'gotAppetiteBoost_dmi_dt', 'gotDewormed_dmi_dt', 'gotHNMVaccination_dmi_dt', 'total_tdn_1_dt_dmi','total_tdn_2_dt_dmi', 'total_tdn_3_dt_dmi', 'daysOnFeedNow_r', 'mw_dmi_dt_ratio', 'day_diff_dmi']
+        },
+
+    'limousine_book_adg_1_full_exp':
+        {
+            'pass':True,
+            'depended_attr': 'pred_adgLatest_average', 
+            'indpended_attr':   [ 'hasBEF_dmi_dt', 'gotAppetiteBoost_dmi_dt', 'gotDewormed_dmi_dt', 'gotHNMVaccination_dmi_dt', 'weight_ddmi', 'total_tdn_3_dt_dmi', 'daysOnFeedNow', 'mw_dmi_dt_ratio', 'tdn_silage_dt_r_dmi', 'tdn_slobber_dt_r_dmi', 'tdn_rumput_log', 'FeedRatio_squared', 'day_diff_dmi']
+        },
+    'limousine_book_adg_1_dmi_over_mw':
+        {
+            'pass':True,
+            'depended_attr': 'pred_adgLatest_average', 
+            'indpended_attr':   [ 'hasBEF_dmi_dt', 'gotAppetiteBoost_dmi_dt', 'gotDewormed_dmi_dt', 'gotHNMVaccination_dmi_dt', 'mw_dmi_dt_ratio', 'tdn_silage_dt_r_dmi_mw', 'tdn_slobber_dt_r_dmi_mw', 'tdn_SP2A_dt_r_dmi_mw', 'tdn_rumput_log', 'FeedRatio_squared', 'day_diff_dmi']
+        },
+
+    'simental_book_adg_1_root_dmi':
+        {
+            'pass':False,
             'depended_attr': 'pred_adgLatest_average', 
             'indpended_attr':   [ 'hasBEF_dmi_dt', 'mw_dmi_dt_ratio',  'tdn_silage_dt_r_dmi', 'tdn_rumput_dt_r_dmi_mw', 'tdn_slobber_dt_r_dmi_mw', 'tdn_SP2A_dt_r_dmi_mw', 'tdn_ricehay_dt_r_dmi_mw','day_diff_dmi']
         },

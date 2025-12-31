@@ -118,7 +118,7 @@ def main():
     dependent_vars = ['pred_adgLatest_average']  # <-- CHANGE THIS
     
     # List of independent variables (x-axis)
-    independent_vars = ['weight', 'weight_se']  # <-- CHANGE THIS
+    independent_vars = [ 'silage_rumput_dt_r_dmi']  # <-- CHANGE THIS
     
     # ============================================================
     
@@ -130,7 +130,7 @@ def main():
     # Iterate through each dataset
     for n, df in dfs.items():
         # Filter data
-        df = df[df['pred_adgLatest_average'] >= 0]
+        #df = df[df['pred_adgLatest_average'] >= 0]
         
         print(f"\n{'='*80}")
         print(f"Processing dataset with n = {n}")
@@ -140,7 +140,7 @@ def main():
         print(f"{'='*80}\n")
         
         # Process Limousin breed
-        df_limousin = df[df['breed'] == 'Limousin'].copy()
+        df_limousin = df[df['breed'].isin(['Limousin', 'Limousine'])].copy()
         if len(df_limousin) > 0:
             print(f"Creating plots for Limousin (n={len(df_limousin)} samples)")
             plot_variables(
@@ -153,7 +153,7 @@ def main():
             print(f"No Limousin data available")
         
         # Process Simental breed
-        df_simental = df[df['breed'] == 'Simental'].copy()
+        df_simental = df[df['breed'].isin(['Simental', 'Simmental'])]
         if len(df_simental) > 0:
             print(f"Creating plots for Simental (n={len(df_simental)} samples)")
             plot_variables(
