@@ -1,0 +1,56 @@
+{
+  "title": "Kal_limousine_book_adg_1_dmi_over_mw",
+  "n": 1,
+  "formula": "pred_adgLatest_average ~ hasBEF_dmi_dt + hormone_effect_dt_dmi + gotDewormed_dmi_dt + gotHNMVaccination_dmi_dt + mw_dmi_dt_ratio + tdn_silage_dt_r_dmi_mw + tdn_tahu_dt_r_dmi_mw + tdn_SP2A_dt_r_dmi_mw + tdn_SMG_dt_r_dmi_mw + tdn_rumput_dt_r_dmi_mw + day_diff_dmi",
+  "group_col": "cow_id",
+  "min_group_size": 4,
+  "reml": true,
+  "independent_variables": [
+    "hasBEF_dmi_dt",
+    "hormone_effect_dt_dmi",
+    "gotDewormed_dmi_dt",
+    "gotHNMVaccination_dmi_dt",
+    "mw_dmi_dt_ratio",
+    "tdn_silage_dt_r_dmi_mw",
+    "tdn_tahu_dt_r_dmi_mw",
+    "tdn_SP2A_dt_r_dmi_mw",
+    "tdn_SMG_dt_r_dmi_mw",
+    "tdn_rumput_dt_r_dmi_mw",
+    "day_diff_dmi"
+  ],
+  "dependent_variable": "pred_adgLatest_average",
+  "summary": {
+    "aic": NaN,
+    "bic": NaN,
+    "llf": Infinity,
+    "scale": 0.19054325667129246,
+    "n_groups": 0
+  },
+  "fixed_effect_params": {
+    "Intercept": 4.643643785224217e-19,
+    "hasBEF_dmi_dt": -0.04013725804057251,
+    "hormone_effect_dt_dmi": 0.029690003309319146,
+    "gotDewormed_dmi_dt": -0.03720002057418486,
+    "gotHNMVaccination_dmi_dt": -0.020837239470051748,
+    "mw_dmi_dt_ratio": -0.0006622789367891407,
+    "tdn_silage_dt_r_dmi_mw": 0.002251345398732096,
+    "tdn_tahu_dt_r_dmi_mw": 0.002221299811781041,
+    "tdn_SP2A_dt_r_dmi_mw": 0.0011602065882452845,
+    "tdn_SMG_dt_r_dmi_mw": 0.0018120854275079923,
+    "tdn_rumput_dt_r_dmi_mw": 0.002566959742265597,
+    "day_diff_dmi": -0.0005479545078088018
+  },
+  "random_effects": null,
+  "nakagawa_r2": {
+    "marginal": 0.3871,
+    "conditional": 0.3871,
+    "var_fixed": 0.120333,
+    "var_random": 0.0,
+    "var_resid": 0.190543,
+    "icc": 0.0
+  },
+  "diagnostics": {
+    "error": "Cannot predict random effects from singular covariance structure."
+  },
+  "cross_validation": null
+}

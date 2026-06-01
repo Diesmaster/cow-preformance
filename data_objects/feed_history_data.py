@@ -212,10 +212,7 @@ class FeedHistoryData:
 
 
     @staticmethod
-    def calc_diet_ingredients(dic, entry, days, parent=False):
-
-        #print(f"number of days: {days}")
-
+    def calc_diet_ingredients(dic, entry, days, parent=False, prt=False):
 
         for ration_entry in entry:
             if not ration_entry['name'] in dic:
@@ -232,6 +229,12 @@ class FeedHistoryData:
                 
                 if ration_entry['dryMatterIntakePerCow'] > 0:
                     dic[ration_entry['name']]['dryMatterIntakePerCow'] = ration_entry['dryMatterIntakePerCow']*days
+                    if prt == True:
+                        print(f"{ration_entry=}")
+                        print(f"{ration_entry['name']=}")
+                        print(f"{dic[ration_entry['name']]['dryMatterIntakePerCow']=}")
+                        print(f"{ration_entry['dryMatterIntakePerCow']*days=}")
+
             else:
                 if ration_entry['asFedIntakePerCow'] > 0:
                     #print("##############")
@@ -245,9 +248,15 @@ class FeedHistoryData:
 
                 if ration_entry['dryMatterIntakePerCow'] > 0: 
                     dic[ration_entry['name']]['dryMatterIntakePerCow'] += ration_entry['dryMatterIntakePerCow']*days
+                    if prt == True:
+                        print(f"{ration_entry=}")
+                        print(f"{ration_entry['name']=}")
+                        print(f"{dic[ration_entry['name']]['dryMatterIntakePerCow']=}")
+                        print(f"{ration_entry['dryMatterIntakePerCow']*days=}")
+
 
             if not ration_entry['rationDetails'] == None and not ration_entry['rationDetails'] == []:
-                dic = FeedHistoryData.calc_diet_ingredients(dic, ration_entry['rationDetails'], days, True)
+                dic = FeedHistoryData.calc_diet_ingredients(dic, ration_entry['rationDetails'], days, True, prt)
 
         return dic
 
@@ -263,11 +272,12 @@ class FeedHistoryData:
         try:
             # Convert start and end dates to datetime objects
             start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
-            end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')  - timedelta(days=1)
+            end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')  #- timedelta(days=1)
             
 
             # Total number of days in the range (inclusive)
-            total_days = (end_date_obj - start_date_obj).days  + 1
+            total_days = (end_date_obj - start_date_obj).days 
+            
             diet = {}
 
             # Loop through each entry in the feed history data
@@ -283,12 +293,27 @@ class FeedHistoryData:
 
                 # Determine the entry's active period within the range
                 entry_start = max(start_date_obj, entry_date_obj)
-                entry_end = min(end_date_obj, next_entry_date_obj - timedelta(days=1))  # Exclude next entry's start date
+                entry_end = min(end_date_obj- timedelta(days=1), next_entry_date_obj - timedelta(days=1))  # Exclude next entry's start date
                 day_difference = max(0, (entry_end - entry_start).days + 1)  # Ensure non-negative and inclusive days
+                cutoff_date = datetime(2026, 2, 1)
+
 
                 # Print how many days this entry contributes
                 if day_difference > 0:
-                    diet = FeedHistoryData.calc_diet_ingredients(diet, entry['rationDetails'], day_difference)
+
+                    diet = FeedHistoryData.calc_diet_ingredients(diet, entry['rationDetails'], day_difference, False, False)
+
+
+                if day_difference > 0 and entry_start > cutoff_date:
+                    """
+                    print(f"{total_days=}")
+                    print(f"f{end_date_obj=}")
+                    print(f"f{next_entry_date_obj=}")
+                    print(f"{entry_end=}") 
+                    print(f"{entry_start=}") 
+                    print(f"{day_difference=}")
+                    """
+                    #print(diet)
 
             return diet
         except Exception as e:

@@ -6,7 +6,10 @@ tdn_table = {
     "Rice Hay": 0.45,
     "Pakchong Grass - Qurban": 0.5087,
     "SP2B mix": 0.7064,
-    "SP2A mix": 0.7064
+    "SP2A mix": 0.7064,
+    "Ampas Tahu": 0.7790,
+    "SMG Mixfeed S14": 0.65
+
 }
 
 pk_table = {

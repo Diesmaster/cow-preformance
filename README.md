@@ -296,4 +296,5 @@ show difference between OLS and Panel
 
 Conculsions
 
-
+## example runs
+`python3 model_cli.py --model-type ols --no-cv --no-kalman`

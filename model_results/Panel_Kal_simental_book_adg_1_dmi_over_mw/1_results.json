@@ -1,0 +1,90 @@
+{
+  "title": "Panel_Kal_simental_book_adg_1_dmi_over_mw",
+  "n": 1,
+  "group_col": "cow_id",
+  "time_col": "pred_date",
+  "entity_effects": true,
+  "time_effects": false,
+  "independent_variables": [
+    "gotDewormed_dmi_dt",
+    "gotHNMVaccination_dmi_dt",
+    "mw_dmi_dt_ratio",
+    "tdn_silage_dt_r_dmi_mw",
+    "tdn_tahu_dt_r_dmi_mw",
+    "tdn_SP2A_dt_r_dmi_mw",
+    "tdn_SMG_dt_r_dmi_mw",
+    "tdn_rumput_dt_r_dmi_mw",
+    "day_diff_dmi"
+  ],
+  "dependent_variable": "pred_adgLatest_average",
+  "summary": {
+    "r2": 0.4486229910424776,
+    "r2_within": 0.4486229910424776,
+    "r2_between": -3.890162573149432,
+    "r2_overall": -2.882660789828464,
+    "f_statistic": 8.76924286814126,
+    "f_pvalue": 1.5251913065839062e-09,
+    "n_entities": 13,
+    "n_obs": 119,
+    "mean_fixed_effect": 0.7595204915208632
+  },
+  "coefficients": {
+    "gotDewormed_dmi_dt": -0.03411119824847768,
+    "gotHNMVaccination_dmi_dt": -0.024986224940339908,
+    "mw_dmi_dt_ratio": -0.0008272581210697988,
+    "tdn_silage_dt_r_dmi_mw": 0.0028307476249339746,
+    "tdn_tahu_dt_r_dmi_mw": 0.0014594461479054811,
+    "tdn_SP2A_dt_r_dmi_mw": 0.0013217514685233947,
+    "tdn_SMG_dt_r_dmi_mw": 0.0022436367030308577,
+    "tdn_rumput_dt_r_dmi_mw": 0.001587459945472903,
+    "day_diff_dmi": -0.0008340659934080811
+  },
+  "std_errors": {
+    "gotDewormed_dmi_dt": 0.015575381025309042,
+    "gotHNMVaccination_dmi_dt": 0.01407372768601775,
+    "mw_dmi_dt_ratio": 0.000129961853585186,
+    "tdn_silage_dt_r_dmi_mw": 0.0004729511649495946,
+    "tdn_tahu_dt_r_dmi_mw": 0.0004837777290645146,
+    "tdn_SP2A_dt_r_dmi_mw": 0.0004254844547600432,
+    "tdn_SMG_dt_r_dmi_mw": 0.0005154953275536428,
+    "tdn_rumput_dt_r_dmi_mw": 0.00066375186495193,
+    "day_diff_dmi": 0.00018412377814872003
+  },
+  "pvalues": {
+    "gotDewormed_dmi_dt": 0.03091592537430521,
+    "gotHNMVaccination_dmi_dt": 0.07897143900085135,
+    "mw_dmi_dt_ratio": 6.46851994190456e-09,
+    "tdn_silage_dt_r_dmi_mw": 3.634032208488236e-08,
+    "tdn_tahu_dt_r_dmi_mw": 0.0032624940887584497,
+    "tdn_SP2A_dt_r_dmi_mw": 0.002483381094871673,
+    "tdn_SMG_dt_r_dmi_mw": 3.3357624522389884e-05,
+    "tdn_rumput_dt_r_dmi_mw": 0.018701258404284937,
+    "day_diff_dmi": 1.681271922260308e-05
+  },
+  "entity_fixed_effects": {
+    "A-008": 0.7511261297013289,
+    "A-013": 0.900431435215882,
+    "A-021": 0.7956214274648739,
+    "A-023": 0.7415400554990216,
+    "A-024": 0.14668923034003,
+    "A-026": 1.235119936207671,
+    "A-029": 0.9960278121088815,
+    "A-035": 0.6500929923489257,
+    "A-036": 0.3885597209996543,
+    "A-038": 0.5899161051182376,
+    "A-041": 0.5064086135913388,
+    "A-043": 1.2681122074190836,
+    "A-051": 0.9041207237562937
+  },
+  "diagnostics": {
+    "residual_normality": {
+      "anderson_darling_stat": 0.7311911832314877,
+      "pvalue": 0.05515711453256667
+    },
+    "durbin_watson": 1.859192201451054,
+    "n_entities": 13,
+    "n_obs": 119,
+    "mean_fixed_effect": 0.7595204915208632
+  },
+  "cross_validation": null
+}

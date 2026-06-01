@@ -115,10 +115,10 @@ def main():
     # ============================================================
     
     # List of dependent variables (y-axis)
-    dependent_vars = ['pred_adgLatest_average']  # <-- CHANGE THIS
+    dependent_vars = ['pred_adgLatest_average','pred_fcrLatest_average']  # <-- CHANGE THIS
     
     # List of independent variables (x-axis)
-    independent_vars = [ 'silage_rumput_dt_r_dmi']  # <-- CHANGE THIS
+    independent_vars = [ 'tdn_SP2A_dt_r_dmi_mw', 'tdn_slobber_dt_r_dmi_mw' ]  # <-- CHANGE THIS
     
     # ============================================================
     

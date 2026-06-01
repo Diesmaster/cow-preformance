@@ -9,3 +9,4 @@ __pycache__/
 *.so
 .Python
 check.txt
+cattle_ssm/results/*.nc

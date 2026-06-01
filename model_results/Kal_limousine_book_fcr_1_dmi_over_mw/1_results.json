@@ -1,0 +1,54 @@
+{
+  "title": "Kal_limousine_book_fcr_1_dmi_over_mw",
+  "n": 1,
+  "formula": "pred_fcrLatest_average ~ hasBEF_dt + gotDewormed_dmi_dt + metabolic_weight + tdn_silage_dt + tdn_tahu_dt + tdn_SP2A_dt + tdn_SMG_dt + tdn_rumput_dt + avg_real_dm_inake_per_weight_per_day_log + day_diff_dmi",
+  "group_col": "cow_id",
+  "min_group_size": 4,
+  "reml": true,
+  "independent_variables": [
+    "hasBEF_dt",
+    "gotDewormed_dmi_dt",
+    "metabolic_weight",
+    "tdn_silage_dt",
+    "tdn_tahu_dt",
+    "tdn_SP2A_dt",
+    "tdn_SMG_dt",
+    "tdn_rumput_dt",
+    "avg_real_dm_inake_per_weight_per_day_log",
+    "day_diff_dmi"
+  ],
+  "dependent_variable": "pred_fcrLatest_average",
+  "summary": {
+    "aic": NaN,
+    "bic": NaN,
+    "llf": Infinity,
+    "scale": 17.826760632678425,
+    "n_groups": 0
+  },
+  "fixed_effect_params": {
+    "Intercept": 2.3494511139396766e-13,
+    "hasBEF_dt": -51.39552828771102,
+    "gotDewormed_dmi_dt": -0.28826285809886665,
+    "metabolic_weight": -0.40203738190024146,
+    "tdn_silage_dt": 2.262215945900596,
+    "tdn_tahu_dt": 4.875352818143401,
+    "tdn_SP2A_dt": 1.3247697957294697,
+    "tdn_SMG_dt": 1.8782198887303587,
+    "tdn_rumput_dt": 2.0651059863358343,
+    "avg_real_dm_inake_per_weight_per_day_log": -13.834108885555857,
+    "day_diff_dmi": -0.0014833713207774361
+  },
+  "random_effects": null,
+  "nakagawa_r2": {
+    "marginal": 0.5246,
+    "conditional": 0.5246,
+    "var_fixed": 19.672138,
+    "var_random": 0.0,
+    "var_resid": 17.826761,
+    "icc": 0.0
+  },
+  "diagnostics": {
+    "error": "Cannot predict random effects from singular covariance structure."
+  },
+  "cross_validation": null
+}
